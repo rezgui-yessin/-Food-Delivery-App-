@@ -24,5 +24,6 @@ public class User {
     private String passwordHash;
     private String  fullName;
     private Role role;
+    @Builder.Default
     private Instant createdAt = Instant.now();
 }

@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
+import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
 
 @Data
@@ -15,12 +16,16 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Restaurant {
     @Id
     private String id;
-    private  String name;
+
+    @Indexed
+    private String ownerId;
+
+    private String name;
     private String description;
     private String address;
     private String phone;
     private String cuisineType;
-    private  boolean open ;
+    private boolean open;
 
 
 }

@@ -4,6 +4,7 @@ import food_delivery_api.modell.Restaurant;
 
 public record RestaurantResponse(
         String id,
+        String ownerId,
         String name,
         String description,
         String address,
@@ -11,9 +12,10 @@ public record RestaurantResponse(
         String cuisineType,
         boolean open
 ) {
-    public static RestaurantResponse from (Restaurant r ){
+    public static RestaurantResponse from(Restaurant r) {
         return new RestaurantResponse(
                 r.getId(),
+                r.getOwnerId(),
                 r.getName(),
                 r.getDescription(),
                 r.getAddress(),
