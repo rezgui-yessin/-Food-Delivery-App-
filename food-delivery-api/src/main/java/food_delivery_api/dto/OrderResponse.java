@@ -10,25 +10,31 @@ import java.util.List;
 public record OrderResponse(
         String id,
         String restaurantId,
+        String customerId,
         String customerName,
         String customerPhone,
         String deliveryAddress,
         List<OrderItemResponse> items,
         BigDecimal totalAmount,
         OrderStatus status,
-        Instant createdAt
-) {
-    public static OrderResponse from(Order order) {
+        String driverId,
+        String driverName,
+        Instant createdAt,
+        Instant updatedAt) {
+    public static OrderResponse from(Order o) {
         return new OrderResponse(
-                order.getId(),
-                order.getRestaurantId(),
-                order.getCustomerName(),
-                order.getCustomerPhone(),
-                order.getDeliveryAddress(),
-                order.getItems().stream().map(OrderItemResponse::from).toList(),
-                order.getTotalAmount(),
-                order.getStatus(),
-                order.getCreatedAt()
-        );
+                o.getId(),
+                o.getRestaurantId(),
+                o.getCustomerId(),
+                o.getCustomerName(),
+                o.getCustomerPhone(),
+                o.getDeliveryAddress(),
+                o.getItems() != null ? o.getItems().stream().map(OrderItemResponse::from).toList() : List.of(),
+                o.getTotalAmount(),
+                o.getStatus(),
+                o.getDriverId(),
+                o.getDriverName(),
+                o.getCreatedAt(),
+                o.getUpdatedAt());
     }
 }

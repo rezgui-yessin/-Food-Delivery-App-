@@ -1,6 +1,5 @@
 package food_delivery_api.modell;
 
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,7 +7,6 @@ import lombok.NoArgsConstructor;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.mongodb.core.index.Indexed;
 import org.springframework.data.mongodb.core.mapping.Document;
-import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -21,9 +19,11 @@ import java.util.List;
 @Document(collection = "orders")
 public class Order {
     @Id
-    private  String id;
+    private String id;
     @Indexed
-    private String  restaurantId;
+    private String restaurantId;
+    @Indexed
+    private String customerId;
     private String customerName;
     private String customerPhone;
     private String deliveryAddress;
@@ -31,11 +31,17 @@ public class Order {
     private List<OrderItem> items;
     private BigDecimal totalAmount;
 
+    @Indexed
+    private String driverId;
+    private String driverName;
+    private String driverPhone;
+
     @Builder.Default
-    private OrderStatus status = OrderStatus.PENDING;
+    private OrderStatus status = OrderStatus.PLACED;
 
     @Builder.Default
     private Instant createdAt = Instant.now();
 
-
+    @Builder.Default
+    private Instant updatedAt = Instant.now();
 }
