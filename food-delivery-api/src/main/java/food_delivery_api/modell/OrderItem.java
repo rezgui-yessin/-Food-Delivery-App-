@@ -16,8 +16,7 @@ public class OrderItem {
     private String menuItemId;
     private String name ;
     private BigDecimal unitPrice;
-    private  int quantity;
+    private int quantity;
     private BigDecimal subtotal;
-
-
+    private String specialInstructions;
 }

@@ -54,8 +54,12 @@ public class OrderService {
 
         // Merge duplicate lines: the same menu item twice becomes one line
         Map<String, Integer> quantities = new LinkedHashMap<>();
+        Map<String, String> instructions = new LinkedHashMap<>();
         for (OrderItemRequest line : request.items()) {
             quantities.merge(line.menuItemId(), line.quantity(), Integer::sum);
+            if (line.specialInstructions() != null && !line.specialInstructions().isBlank()) {
+                instructions.merge(line.menuItemId(), line.specialInstructions().trim(), (a, b) -> a + "; " + b);
+            }
         }
 
         List<OrderItem> items = new ArrayList<>();
@@ -86,6 +90,7 @@ public class OrderService {
                     .unitPrice(menuItem.getPrice())
                     .quantity(quantity)
                     .subtotal(lineTotal)
+                    .specialInstructions(instructions.get(entry.getKey()))
                     .build());
         }
 
