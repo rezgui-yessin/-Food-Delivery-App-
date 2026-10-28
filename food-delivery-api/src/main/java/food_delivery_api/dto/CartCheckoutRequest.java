@@ -1,5 +1,6 @@
 package food_delivery_api.dto;
 
+import food_delivery_api.modell.PaymentMethod;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 
@@ -14,9 +15,15 @@ public record CartCheckoutRequest(
         @NotBlank(message = "Delivery address is required")
         String deliveryAddress,
 
-        String couponCode
+        String couponCode,
+
+        PaymentMethod paymentMethod
 ) {
+        public CartCheckoutRequest(String customerName, String customerPhone, String deliveryAddress, String couponCode) {
+                this(customerName, customerPhone, deliveryAddress, couponCode, PaymentMethod.CARD);
+        }
+
         public CartCheckoutRequest(String customerName, String customerPhone, String deliveryAddress) {
-                this(customerName, customerPhone, deliveryAddress, null);
+                this(customerName, customerPhone, deliveryAddress, null, PaymentMethod.CARD);
         }
 }

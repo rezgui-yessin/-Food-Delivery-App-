@@ -8,9 +8,12 @@ import org.springframework.stereotype.Repository;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public interface OrderRepository extends MongoRepository<Order, String> {
+    Optional<Order> findByStripePaymentIntentId(String stripePaymentIntentId);
+
     List<Order> findAllByOrderByCreatedAtDesc();
 
     List<Order> findByRestaurantIdOrderByCreatedAtDesc(String restaurantId);

@@ -1,5 +1,6 @@
 package food_delivery_api.service;
 
+import com.stripe.model.PaymentIntent;
 import food_delivery_api.dto.OrderCreateRequest;
 import food_delivery_api.dto.OrderItemRequest;
 import food_delivery_api.dto.OrderResponse;
@@ -11,6 +12,8 @@ import food_delivery_api.modell.MenuItem;
 import food_delivery_api.modell.Order;
 import food_delivery_api.modell.OrderItem;
 import food_delivery_api.modell.OrderStatus;
+import food_delivery_api.modell.PaymentMethod;
+import food_delivery_api.modell.PaymentStatus;
 import food_delivery_api.modell.Restaurant;
 import food_delivery_api.modell.Role;
 import food_delivery_api.modell.User;
@@ -20,6 +23,7 @@ import food_delivery_api.repository.RestaurantRepository;
 import food_delivery_api.repository.UserRepository;
 import food_delivery_api.security.AuthenticatedUser;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
@@ -31,6 +35,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class OrderService {
@@ -43,6 +48,7 @@ public class OrderService {
     private final UserRepository userRepository;
     private final OrderTrackingService orderTrackingService;
     private final CouponService couponService;
+    private final StripeService stripeService;
 
     public OrderResponse create(OrderCreateRequest request, AuthenticatedUser user) {
         Restaurant restaurant = restaurantRepository.findById(request.restaurantId())
@@ -106,6 +112,11 @@ public class OrderService {
 
         BigDecimal finalTotal = subtotal.subtract(discount).max(BigDecimal.ZERO);
 
+        PaymentMethod paymentMethod = request.paymentMethod() != null ? request.paymentMethod() : PaymentMethod.CARD;
+        PaymentStatus initialPaymentStatus = finalTotal.compareTo(BigDecimal.ZERO) == 0
+                ? PaymentStatus.PAID
+                : PaymentStatus.PENDING;
+
         Instant now = Instant.now();
         Order order = Order.builder()
                 .restaurantId(restaurant.getId())
@@ -118,12 +129,29 @@ public class OrderService {
                 .subtotalAmount(subtotal)
                 .discountAmount(discount)
                 .totalAmount(finalTotal)
+                .paymentMethod(paymentMethod)
+                .paymentStatus(initialPaymentStatus)
                 .status(OrderStatus.PLACED)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
 
         Order saved = orderRepository.save(order);
+
+        // If paying with Card and total > 0, generate Stripe PaymentIntent
+        if (paymentMethod == PaymentMethod.CARD && finalTotal.compareTo(BigDecimal.ZERO) > 0) {
+            try {
+                PaymentIntent intent = stripeService.createPaymentIntent(saved);
+                if (intent != null) {
+                    saved.setStripePaymentIntentId(intent.getId());
+                    saved.setStripeClientSecret(intent.getClientSecret());
+                    saved = orderRepository.save(saved);
+                }
+            } catch (Exception e) {
+                log.error("Failed to initialize Stripe PaymentIntent during order creation: {}", e.getMessage());
+            }
+        }
+
         String eventMsg = appliedCouponCode != null
                 ? "Order placed with coupon " + appliedCouponCode + " (saved $" + discount + ")"
                 : "Order placed successfully";
@@ -260,6 +288,27 @@ public class OrderService {
         order.setStatus(next);
         order.setUpdatedAt(Instant.now());
 
+        // Auto-refund if order is cancelled and was already paid via Stripe
+        if (next == OrderStatus.CANCELLED) {
+            if (order.getPaymentStatus() == PaymentStatus.PAID && order.getStripePaymentIntentId() != null) {
+                try {
+                    stripeService.refundPayment(order.getStripePaymentIntentId(), order.getTotalAmount());
+                    order.setPaymentStatus(PaymentStatus.REFUNDED);
+                    log.info("Auto-refunded cancelled order {}", order.getId());
+                } catch (Exception e) {
+                    log.error("Failed to refund cancelled order {}: {}", order.getId(), e.getMessage());
+                }
+            }
+        }
+
+        // If Cash On Delivery and order is delivered, mark payment as PAID
+        if (next == OrderStatus.DELIVERED) {
+            if (order.getPaymentMethod() == PaymentMethod.CASH_ON_DELIVERY && order.getPaymentStatus() == PaymentStatus.PENDING) {
+                order.setPaymentStatus(PaymentStatus.PAID);
+                log.info("Cash-on-delivery order {} marked as PAID upon delivery", order.getId());
+            }
+        }
+
         Order saved = orderRepository.save(order);
         orderTrackingService.notifyStatusUpdate(saved, "Order status changed to " + next);
         return OrderResponse.from(saved);
@@ -271,7 +320,7 @@ public class OrderService {
         return orderTrackingService.subscribe(id, order);
     }
 
-    private void requireCanAccess(Order order, AuthenticatedUser user) {
+    public void requireCanAccess(Order order, AuthenticatedUser user) {
         if (user == null) {
             throw new AccessDeniedException("Authentication required");
         }

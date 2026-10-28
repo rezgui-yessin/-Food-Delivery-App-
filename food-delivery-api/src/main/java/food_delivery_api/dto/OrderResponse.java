@@ -2,6 +2,8 @@ package food_delivery_api.dto;
 
 import food_delivery_api.modell.Order;
 import food_delivery_api.modell.OrderStatus;
+import food_delivery_api.modell.PaymentMethod;
+import food_delivery_api.modell.PaymentStatus;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -20,6 +22,10 @@ public record OrderResponse(
         BigDecimal totalAmount,
         String couponCode,
         OrderStatus status,
+        PaymentMethod paymentMethod,
+        PaymentStatus paymentStatus,
+        String stripePaymentIntentId,
+        String stripeClientSecret,
         String driverId,
         String driverName,
         Instant createdAt,
@@ -38,6 +44,10 @@ public record OrderResponse(
                 o.getTotalAmount(),
                 o.getCouponCode(),
                 o.getStatus(),
+                o.getPaymentMethod(),
+                o.getPaymentStatus(),
+                o.getStripePaymentIntentId(),
+                o.getStripeClientSecret(),
                 o.getDriverId(),
                 o.getDriverName(),
                 o.getCreatedAt(),

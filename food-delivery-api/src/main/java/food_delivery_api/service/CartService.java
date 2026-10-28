@@ -13,6 +13,7 @@ import food_delivery_api.exception.ResourceNotFoundException;
 import food_delivery_api.modell.Cart;
 import food_delivery_api.modell.CartItem;
 import food_delivery_api.modell.MenuItem;
+import food_delivery_api.modell.PaymentMethod;
 import food_delivery_api.modell.Restaurant;
 import food_delivery_api.modell.Role;
 import food_delivery_api.repository.CartRepository;
@@ -173,13 +174,16 @@ public class CartService {
                 .map(item -> new OrderItemRequest(item.getMenuItemId(), item.getQuantity(), item.getSpecialInstructions()))
                 .toList();
 
+        PaymentMethod paymentMethod = request.paymentMethod() != null ? request.paymentMethod() : PaymentMethod.CARD;
+
         OrderCreateRequest orderCreateRequest = new OrderCreateRequest(
                 cart.getRestaurantId(),
                 request.customerName(),
                 request.customerPhone(),
                 request.deliveryAddress(),
                 orderItems,
-                request.couponCode()
+                request.couponCode(),
+                paymentMethod
         );
 
         OrderResponse placedOrder = orderService.create(orderCreateRequest, user);

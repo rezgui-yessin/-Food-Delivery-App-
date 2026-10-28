@@ -1,5 +1,6 @@
 package food_delivery_api.dto;
 
+import food_delivery_api.modell.PaymentMethod;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -18,8 +19,15 @@ public record OrderCreateRequest(
 
         @NotEmpty(message = "Order must contain at least one item") @Valid List<OrderItemRequest> items,
 
-        String couponCode) {
+        String couponCode,
+
+        PaymentMethod paymentMethod) {
+
+    public OrderCreateRequest(String restaurantId, String customerName, String customerPhone, String deliveryAddress, List<OrderItemRequest> items, String couponCode) {
+        this(restaurantId, customerName, customerPhone, deliveryAddress, items, couponCode, PaymentMethod.CARD);
+    }
+
     public OrderCreateRequest(String restaurantId, String customerName, String customerPhone, String deliveryAddress, List<OrderItemRequest> items) {
-        this(restaurantId, customerName, customerPhone, deliveryAddress, items, null);
+        this(restaurantId, customerName, customerPhone, deliveryAddress, items, null, PaymentMethod.CARD);
     }
 }

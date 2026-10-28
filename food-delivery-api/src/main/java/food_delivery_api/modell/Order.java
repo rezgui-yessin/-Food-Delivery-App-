@@ -35,6 +35,17 @@ public class Order {
     private BigDecimal discountAmount = BigDecimal.ZERO;
     private BigDecimal totalAmount;
 
+    @Builder.Default
+    private PaymentMethod paymentMethod = PaymentMethod.CARD;
+
+    @Builder.Default
+    private PaymentStatus paymentStatus = PaymentStatus.PENDING;
+
+    @Indexed
+    private String stripePaymentIntentId;
+
+    private String stripeClientSecret;
+
     @Indexed
     private String driverId;
     private String driverName;
