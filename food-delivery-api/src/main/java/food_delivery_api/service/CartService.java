@@ -178,7 +178,8 @@ public class CartService {
                 request.customerName(),
                 request.customerPhone(),
                 request.deliveryAddress(),
-                orderItems
+                orderItems,
+                request.couponCode()
         );
 
         OrderResponse placedOrder = orderService.create(orderCreateRequest, user);

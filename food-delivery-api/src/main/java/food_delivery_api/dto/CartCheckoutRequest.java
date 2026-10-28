@@ -12,5 +12,11 @@ public record CartCheckoutRequest(
         String customerPhone,
 
         @NotBlank(message = "Delivery address is required")
-        String deliveryAddress
-) {}
+        String deliveryAddress,
+
+        String couponCode
+) {
+        public CartCheckoutRequest(String customerName, String customerPhone, String deliveryAddress) {
+                this(customerName, customerPhone, deliveryAddress, null);
+        }
+}

@@ -42,6 +42,7 @@ public class OrderService {
     private final MenuItemRepository menuItemRepository;
     private final UserRepository userRepository;
     private final OrderTrackingService orderTrackingService;
+    private final CouponService couponService;
 
     public OrderResponse create(OrderCreateRequest request, AuthenticatedUser user) {
         Restaurant restaurant = restaurantRepository.findById(request.restaurantId())
@@ -94,6 +95,17 @@ public class OrderService {
                     .build());
         }
 
+        BigDecimal subtotal = total;
+        BigDecimal discount = BigDecimal.ZERO;
+        String appliedCouponCode = null;
+
+        if (request.couponCode() != null && !request.couponCode().isBlank()) {
+            appliedCouponCode = request.couponCode().trim().toUpperCase();
+            discount = couponService.applyAndRedeemCoupon(appliedCouponCode, restaurant.getId(), subtotal);
+        }
+
+        BigDecimal finalTotal = subtotal.subtract(discount).max(BigDecimal.ZERO);
+
         Instant now = Instant.now();
         Order order = Order.builder()
                 .restaurantId(restaurant.getId())
@@ -102,14 +114,20 @@ public class OrderService {
                 .customerPhone(request.customerPhone())
                 .deliveryAddress(request.deliveryAddress())
                 .items(items)
-                .totalAmount(total)
+                .couponCode(appliedCouponCode)
+                .subtotalAmount(subtotal)
+                .discountAmount(discount)
+                .totalAmount(finalTotal)
                 .status(OrderStatus.PLACED)
                 .createdAt(now)
                 .updatedAt(now)
                 .build();
 
         Order saved = orderRepository.save(order);
-        orderTrackingService.notifyStatusUpdate(saved, "Order placed successfully");
+        String eventMsg = appliedCouponCode != null
+                ? "Order placed with coupon " + appliedCouponCode + " (saved $" + discount + ")"
+                : "Order placed successfully";
+        orderTrackingService.notifyStatusUpdate(saved, eventMsg);
         return OrderResponse.from(saved);
     }
 

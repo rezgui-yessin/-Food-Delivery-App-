@@ -29,6 +29,10 @@ public class Order {
     private String deliveryAddress;
 
     private List<OrderItem> items;
+    private String couponCode;
+    private BigDecimal subtotalAmount;
+    @Builder.Default
+    private BigDecimal discountAmount = BigDecimal.ZERO;
     private BigDecimal totalAmount;
 
     @Indexed
