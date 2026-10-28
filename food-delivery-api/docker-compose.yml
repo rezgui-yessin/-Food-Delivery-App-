@@ -1,0 +1,81 @@
+version: '3.8'
+
+services:
+  # =======================================================
+  # MongoDB Database Service
+  # =======================================================
+  mongodb:
+    image: mongo:7.0
+    container_name: food-delivery-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: food_delivery_db
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - food-delivery-net
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # =======================================================
+  # Mongo Express - Visual Database Management Web UI
+  # Accessible at: http://localhost:8082
+  # =======================================================
+  mongo-express:
+    image: mongo-express:latest
+    container_name: food-delivery-mongo-express
+    restart: unless-stopped
+    ports:
+      - "8082:8081"
+    environment:
+      ME_CONFIG_MONGODB_SERVER: mongodb
+      ME_CONFIG_MONGODB_PORT: 27017
+      ME_CONFIG_BASICAUTH: "false"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - food-delivery-net
+
+  # =======================================================
+  # Food Delivery Spring Boot API Service
+  # Accessible at: http://localhost:8081
+  # Swagger Docs:  http://localhost:8081/swagger-ui.html
+  # =======================================================
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: food-delivery-api
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/food_delivery_db
+      - SPRING_MONGODB_URI=mongodb://mongodb:27017/food_delivery_db
+      - JWT_SECRET=${JWT_SECRET:-ZKe5+BwNbNuqIhZxJDwox3yKtKCFehgIWhpedZT7nY04n6G2HAyp8MyHOr7If8Y+}
+      - STRIPE_API_KEY=${STRIPE_API_KEY:-sk_test_placeholder_key}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-whsec_placeholder_secret}
+      - STRIPE_CURRENCY=${STRIPE_CURRENCY:-usd}
+      - CLOUDINARY_CLOUD_NAME=${CLOUDINARY_CLOUD_NAME:-djalg6hkt}
+      - CLOUDINARY_API_KEY=${CLOUDINARY_API_KEY:-675896959317332}
+      - CLOUDINARY_API_SECRET=${CLOUDINARY_API_SECRET:-9fxNxXuQUOUprJDZNZx0HWyboAQ}
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    networks:
+      - food-delivery-net
+
+networks:
+  food-delivery-net:
+    driver: bridge
+
+volumes:
+  mongodb_data:
+    driver: local
