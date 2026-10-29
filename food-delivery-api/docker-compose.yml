@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # =======================================================
   # MongoDB Database Service
@@ -79,3 +77,4 @@ networks:
 volumes:
   mongodb_data:
     driver: local
+
