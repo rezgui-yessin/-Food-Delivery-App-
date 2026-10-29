@@ -1,0 +1,15 @@
+<div class="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200">
+  <!-- Sticky Global Glassmorphic Navbar -->
+  <app-navbar />
+
+  <!-- Main View Outlet with fade transitions -->
+  <main class="flex-1">
+    <router-outlet />
+  </main>
+
+  <!-- Slide-Over Animated Cart Drawer -->
+  <app-cart-drawer />
+
+  <!-- Floating Toast Notification Container (top-right) -->
+  <app-toast-container />
+</div>
