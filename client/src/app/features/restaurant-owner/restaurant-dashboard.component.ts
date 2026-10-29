@@ -8,6 +8,7 @@ import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { MenuItem, Order, OrderStatus, Restaurant } from '../../core/models';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
+import { getDishImage, PRESET_DISH_IMAGES } from '../../core/utils/asset-helpers';
 import { fadeAnimation } from '../../shared/animations/animations';
 
 @Component({
@@ -277,12 +278,8 @@ import { fadeAnimation } from '../../shared/animations/animations';
                       <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-700/30 transition-colors">
                         <td class="py-3 px-4">
                           <div class="flex items-center gap-3">
-                            <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 overflow-hidden flex-shrink-0">
-                              @if (dish.imageUrl) {
-                                <img [src]="dish.imageUrl" [alt]="dish.name" class="w-full h-full object-cover">
-                              } @else {
-                                <div class="w-full h-full flex items-center justify-center text-lg">🍔</div>
-                              }
+                            <div class="w-12 h-12 rounded-xl bg-slate-100 dark:bg-slate-700 overflow-hidden flex-shrink-0 shadow-sm border border-slate-200 dark:border-slate-700">
+                              <img [src]="getDishImage(dish.name, dish.imageUrl)" [alt]="dish.name" class="w-full h-full object-cover">
                             </div>
                             <div>
                               <p class="font-bold text-slate-800 dark:text-white">{{ dish.name }}</p>
@@ -386,11 +383,27 @@ import { fadeAnimation } from '../../shared/animations/animations';
         </div>
 
         <div>
-          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Image URL (or Unsplash link)</label>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1.5">Preset Food Photos</label>
+          <div class="flex gap-2 overflow-x-auto pb-2">
+            @for (preset of presetDishImages; track preset.url) {
+              <button
+                type="button"
+                (click)="dishForm.patchValue({ imageUrl: preset.url })"
+                class="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden border-2 transition-all hover:scale-105"
+                [class]="dishForm.get('imageUrl')?.value === preset.url ? 'border-primary ring-2 ring-primary/40' : 'border-slate-200 dark:border-slate-700 opacity-70 hover:opacity-100'"
+                [title]="preset.label">
+                <img [src]="preset.url" [alt]="preset.label" class="w-full h-full object-cover">
+              </button>
+            }
+          </div>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold uppercase tracking-wider text-slate-600 dark:text-slate-300 mb-1">Image URL</label>
           <input
             formControlName="imageUrl"
             type="text"
-            placeholder="https://images.unsplash.com/..."
+            placeholder="Selected preset or custom image URL..."
             class="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary/40">
         </div>
 
@@ -405,6 +418,8 @@ import { fadeAnimation } from '../../shared/animations/animations';
   `
 })
 export class RestaurantDashboardComponent implements OnInit {
+  readonly getDishImage = getDishImage;
+  readonly presetDishImages = PRESET_DISH_IMAGES;
   private readonly orderService = inject(OrderService);
   private readonly menuService = inject(MenuService);
   private readonly restaurantService = inject(RestaurantService);
@@ -518,6 +533,18 @@ export class RestaurantDashboardComponent implements OnInit {
 
   playKitchenBell(): void {
     try {
+      const audio = new Audio('/assets/sounds/kitchen-bell.wav');
+      audio.volume = 0.6;
+      audio.play().catch(() => {
+        this.fallbackWebAudioBell();
+      });
+    } catch {
+      this.fallbackWebAudioBell();
+    }
+  }
+
+  private fallbackWebAudioBell(): void {
+    try {
       const ctx = this.audioContext || new (window.AudioContext || (window as any).webkitAudioContext)();
       this.audioContext = ctx;
 
@@ -538,7 +565,7 @@ export class RestaurantDashboardComponent implements OnInit {
       osc.start(ctx.currentTime);
       osc.stop(ctx.currentTime + 0.5);
     } catch (e) {
-      console.warn('Web Audio playback unavailable', e);
+      console.warn('Audio unavailable', e);
     }
   }
 

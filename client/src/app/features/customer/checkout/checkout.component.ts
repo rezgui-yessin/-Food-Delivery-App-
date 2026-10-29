@@ -6,6 +6,7 @@ import { CartService } from '../../../core/services/cart.service';
 import { PaymentService } from '../../../core/services/payment.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { PaymentMethod } from '../../../core/models';
+import { getDishImage } from '../../../core/utils/asset-helpers';
 import { fadeAnimation } from '../../../shared/animations/animations';
 
 @Component({
@@ -183,14 +184,22 @@ import { fadeAnimation } from '../../../shared/animations/animations';
                   </p>
                 }
 
-                <div class="space-y-2 mb-4">
+                <div class="space-y-3 mb-4">
                   @for (item of cartService.items(); track item.menuItemId) {
-                    <div class="flex justify-between text-sm">
-                      <span class="text-slate-600 dark:text-slate-400">
-                        <span class="text-xs bg-slate-100 dark:bg-slate-700 rounded-full px-1.5 py-0.5 mr-1.5 font-bold text-slate-500">×{{ item.quantity }}</span>
-                        {{ item.name }}
-                      </span>
-                      <span class="font-medium text-slate-800 dark:text-white">\${{ (item.unitPrice * item.quantity).toFixed(2) }}</span>
+                    <div class="flex items-center justify-between gap-3 text-sm">
+                      <div class="flex items-center gap-2.5 min-w-0">
+                        <img [src]="getDishImage(item.name)" [alt]="item.name" class="w-10 h-10 rounded-lg object-cover flex-shrink-0 shadow-sm border border-slate-100 dark:border-slate-700">
+                        <div class="min-w-0">
+                          <p class="font-medium text-slate-800 dark:text-white truncate text-xs sm:text-sm">
+                            <span class="text-xs bg-slate-100 dark:bg-slate-700 rounded-md px-1.5 py-0.5 mr-1 font-bold text-slate-600 dark:text-slate-300">×{{ item.quantity }}</span>
+                            {{ item.name }}
+                          </p>
+                          @if (item.specialInstructions) {
+                            <p class="text-[11px] text-slate-400 italic truncate">{{ item.specialInstructions }}</p>
+                          }
+                        </div>
+                      </div>
+                      <span class="font-bold text-slate-800 dark:text-white flex-shrink-0">\${{ (item.unitPrice * item.quantity).toFixed(2) }}</span>
                     </div>
                   }
                 </div>
@@ -224,6 +233,7 @@ import { fadeAnimation } from '../../../shared/animations/animations';
   `
 })
 export class CheckoutComponent implements OnInit, OnDestroy {
+  readonly getDishImage = getDishImage;
   private readonly fb = inject(NonNullableFormBuilder);
   readonly cartService = inject(CartService);
   readonly paymentService = inject(PaymentService);

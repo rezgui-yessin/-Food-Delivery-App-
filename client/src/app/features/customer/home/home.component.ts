@@ -5,6 +5,7 @@ import { FormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 import { RestaurantService } from '../../../core/services/restaurant.service';
 import { Restaurant } from '../../../core/models';
+import { getRestaurantImage } from '../../../core/utils/asset-helpers';
 import { SkeletonRestaurantCardComponent } from '../../../shared/components/skeleton-card/skeleton-card.component';
 import { staggerListAnimation, fadeAnimation } from '../../../shared/animations/animations';
 
@@ -12,6 +13,7 @@ interface CuisineFilter {
   label: string;
   emoji: string;
   value: string;
+  image: string;
 }
 
 @Component({
@@ -21,16 +23,16 @@ interface CuisineFilter {
   animations: [staggerListAnimation, fadeAnimation],
   template: `
     <div class="min-h-screen">
-      <!-- Hero Section -->
+      <!-- Hero Section with Real HD Food Spread Background -->
       <section class="relative bg-gradient-to-br from-slate-900 via-slate-800 to-primary/80 text-white overflow-hidden">
-        <div class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=1200&q=80')] bg-cover bg-center opacity-20"></div>
+        <div class="absolute inset-0 bg-[url('/assets/images/hero/hero-spread.jpg')] bg-cover bg-center opacity-30"></div>
         <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
           <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-4 leading-tight">
             Delicious food,<br>
             <span class="text-primary bg-clip-text">delivered fast</span>
           </h1>
           <p class="text-lg text-slate-300 mb-8 max-w-xl mx-auto">
-            Discover the best restaurants near you and get food delivered in 30 minutes or less.
+            Discover the best restaurants near you and get gourmet meals delivered in 30 minutes or less.
           </p>
 
           <!-- Search Bar -->
@@ -58,16 +60,16 @@ interface CuisineFilter {
       </section>
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
-        <!-- Cuisine Filter Pills -->
-        <div class="flex items-center gap-2 overflow-x-auto pb-4 scrollbar-hide mb-8">
+        <!-- Cuisine Filter Pills with Real Picture Badges -->
+        <div class="flex items-center gap-3 overflow-x-auto pb-4 scrollbar-hide mb-8">
           @for (cuisine of cuisineFilters; track cuisine.value) {
             <button
               (click)="selectCuisine(cuisine.value)"
-              class="flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 border"
+              class="flex items-center gap-2.5 pl-1.5 pr-4 py-1.5 rounded-full text-sm font-semibold whitespace-nowrap transition-all flex-shrink-0 border shadow-sm"
               [class]="selectedCuisine() === cuisine.value
-                ? 'bg-primary text-white border-primary shadow-md'
+                ? 'bg-primary text-white border-primary shadow-md scale-105'
                 : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-primary'">
-              <span>{{ cuisine.emoji }}</span>
+              <img [src]="cuisine.image" [alt]="cuisine.label" class="w-7 h-7 rounded-full object-cover border border-white/40 shadow-inner">
               <span>{{ cuisine.label }}</span>
             </button>
           }
@@ -75,13 +77,13 @@ interface CuisineFilter {
 
         <!-- Filter Bar -->
         <div class="flex items-center justify-between mb-6">
-          <h2 class="text-2xl font-bold text-slate-800 dark:text-white">
+          <h2 class="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
             @if (selectedCuisine() && selectedCuisine() !== 'all') {
-              {{ getSelectedCuisineEmoji() }} {{ selectedCuisine() }} Restaurants
+              <span>{{ getSelectedCuisineEmoji() }} {{ selectedCuisine() }} Restaurants</span>
             } @else {
-              All Restaurants
+              <span>All Restaurants</span>
             }
-            <span class="text-sm font-normal text-slate-400 ml-2">({{ filteredRestaurants().length }})</span>
+            <span class="text-sm font-normal text-slate-400">({{ filteredRestaurants().length }})</span>
           </h2>
 
           <!-- Open Now Toggle -->
@@ -96,7 +98,7 @@ interface CuisineFilter {
           </label>
         </div>
 
-        <!-- Restaurant Grid -->
+        <!-- Restaurant Grid with Real High-Res Photography -->
         @if (isLoading()) {
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             @for (item of skeletons; track $index) {
@@ -122,23 +124,29 @@ interface CuisineFilter {
           <div [@staggerListAnimation]="filteredRestaurants().length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             @for (restaurant of filteredRestaurants(); track restaurant.id) {
               <a [routerLink]="['/restaurants', restaurant.id]" class="group block rounded-2xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm hover:shadow-xl border border-slate-100 dark:border-slate-700 transition-all duration-300 hover:-translate-y-1">
-                <!-- Image -->
-                <div class="relative h-48 bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-600 overflow-hidden">
-                  @if (restaurant.imageUrl) {
-                    <img [src]="restaurant.imageUrl" [alt]="restaurant.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
-                  } @else {
-                    <div class="w-full h-full flex items-center justify-center text-6xl">
-                      {{ getCuisineEmoji(restaurant.cuisineType) }}
-                    </div>
-                  }
+                <!-- Cover Image -->
+                <div class="relative h-48 overflow-hidden bg-slate-100 dark:bg-slate-700">
+                  <img
+                    [src]="getRestaurantImage(restaurant)"
+                    [alt]="restaurant.name"
+                    class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500">
+                  <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent"></div>
+
                   <!-- Open/Closed badge -->
                   <div class="absolute top-3 right-3">
                     <span class="px-2.5 py-1 text-xs font-bold rounded-full shadow-md"
                       [class.bg-emerald-500]="restaurant.open"
                       [class.text-white]="restaurant.open"
-                      [class.bg-slate-500]="!restaurant.open"
-                      [class.text-slate-100]="!restaurant.open">
+                      [class.bg-slate-600]="!restaurant.open"
+                      [class.text-slate-200]="!restaurant.open">
                       {{ restaurant.open ? '● Open' : '● Closed' }}
+                    </span>
+                  </div>
+
+                  <!-- Cuisine Pill Overlay -->
+                  <div class="absolute bottom-3 left-3">
+                    <span class="px-2.5 py-1 text-xs font-bold bg-white/90 dark:bg-slate-900/90 backdrop-blur-md text-slate-800 dark:text-white rounded-lg shadow-sm">
+                      {{ restaurant.cuisineType }}
                     </span>
                   </div>
                 </div>
@@ -149,28 +157,20 @@ interface CuisineFilter {
                     <h3 class="font-bold text-slate-800 dark:text-white text-lg leading-tight group-hover:text-primary transition-colors">
                       {{ restaurant.name }}
                     </h3>
-                    @if (restaurant.rating) {
-                      <span class="flex items-center gap-1 text-sm font-semibold text-amber-500 flex-shrink-0 ml-2">
-                        ⭐ {{ restaurant.rating }}
-                      </span>
-                    }
+                    <span class="flex items-center gap-1 text-sm font-semibold text-amber-500 flex-shrink-0 ml-2">
+                      ⭐ {{ restaurant.rating || 4.8 }}
+                    </span>
                   </div>
                   <p class="text-sm text-slate-500 dark:text-slate-400 line-clamp-2 mb-3">{{ restaurant.description }}</p>
 
-                  <div class="flex items-center gap-2 flex-wrap">
-                    <span class="px-2.5 py-1 text-xs font-semibold bg-primary/10 text-primary rounded-full">
-                      {{ restaurant.cuisineType }}
+                  <div class="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+                    <span class="flex items-center gap-1">
+                      🕐 {{ restaurant.deliveryTimeMin || 25 }}–{{ (restaurant.deliveryTimeMin || 25) + 10 }} min
                     </span>
-                    @if (restaurant.deliveryTimeMin) {
-                      <span class="flex items-center gap-1 text-xs text-slate-500 dark:text-slate-400">
-                        🕐 {{ restaurant.deliveryTimeMin }}–{{ restaurant.deliveryTimeMin + 10 }} min
-                      </span>
-                    } @else {
-                      <span class="text-xs text-slate-500 dark:text-slate-400">🕐 25–35 min</span>
-                    }
-                    @if (restaurant.minOrder) {
-                      <span class="text-xs text-slate-500 dark:text-slate-400">Min \${{ restaurant.minOrder }}</span>
-                    }
+                    <span>•</span>
+                    <span>Min \${{ restaurant.minOrder || 15 }}</span>
+                    <span>•</span>
+                    <span class="text-emerald-600 dark:text-emerald-400 font-semibold">Free Delivery</span>
                   </div>
                 </div>
               </a>
@@ -197,15 +197,14 @@ export class HomeComponent implements OnInit {
   readonly skeletons = Array(6).fill(null);
 
   readonly cuisineFilters: CuisineFilter[] = [
-    { label: 'All', emoji: '🍽️', value: 'all' },
-    { label: 'Pizza', emoji: '🍕', value: 'Pizza' },
-    { label: 'Burgers', emoji: '🍔', value: 'Burgers' },
-    { label: 'Sushi', emoji: '🍣', value: 'Sushi' },
-    { label: 'Healthy', emoji: '🥗', value: 'Healthy' },
-    { label: 'Desserts', emoji: '🍰', value: 'Desserts' },
-    { label: 'Asian', emoji: '🍜', value: 'Asian' },
-    { label: 'Indian', emoji: '🍛', value: 'Indian' },
-    { label: 'Mexican', emoji: '🌮', value: 'Mexican' },
+    { label: 'All', emoji: '🍽️', value: 'all', image: '/assets/images/hero/hero-spread.jpg' },
+    { label: 'Pizza', emoji: '🍕', value: 'Pizza', image: '/assets/images/cuisines/pizza.jpg' },
+    { label: 'Burgers', emoji: '🍔', value: 'Burgers', image: '/assets/images/cuisines/burgers.jpg' },
+    { label: 'Sushi', emoji: '🍣', value: 'Sushi', image: '/assets/images/cuisines/sushi.jpg' },
+    { label: 'Healthy', emoji: '🥗', value: 'Healthy', image: '/assets/images/cuisines/healthy.jpg' },
+    { label: 'Desserts', emoji: '🍰', value: 'Desserts', image: '/assets/images/cuisines/desserts.jpg' },
+    { label: 'Asian', emoji: '🍜', value: 'Asian', image: '/assets/images/cuisines/asian.jpg' },
+    { label: 'Mexican', emoji: '🌮', value: 'Mexican', image: '/assets/images/cuisines/mexican.jpg' }
   ];
 
   readonly filteredRestaurants = computed(() => {
@@ -266,20 +265,15 @@ export class HomeComponent implements OnInit {
     return found ? found.emoji : '🍽️';
   }
 
+  getRestaurantImage(restaurant: Restaurant): string {
+    return getRestaurantImage(restaurant.name, restaurant.cuisineType, restaurant.imageUrl);
+  }
+
   onSearchChange(value: string): void {
     this.searchSubject.next(value);
   }
 
   filterRestaurants(): void {
-    // Triggers the computed signal to re-evaluate
-  }
-
-  getCuisineEmoji(cuisineType: string): string {
-    const map: Record<string, string> = {
-      'Pizza': '🍕', 'Burgers': '🍔', 'Sushi': '🍣', 'Healthy': '🥗',
-      'Desserts': '🍰', 'Asian': '🍜', 'Indian': '🍛', 'Mexican': '🌮',
-      'Italian': '🍝', 'Chinese': '🥡', 'Thai': '🍲'
-    };
-    return map[cuisineType] || '🍽️';
+    // Triggers computed signal
   }
 }

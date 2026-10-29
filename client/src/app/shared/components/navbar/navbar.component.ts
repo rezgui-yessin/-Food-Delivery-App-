@@ -17,9 +17,7 @@ import { Role } from '../../../core/models';
 
           <!-- Logo -->
           <a routerLink="/" class="flex items-center gap-2.5 group">
-            <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-orange-400 flex items-center justify-center shadow-md group-hover:scale-105 transition-transform">
-              <span class="text-white text-lg">🍔</span>
-            </div>
+            <img src="/assets/icons/favicon.svg" alt="FoodRush" class="w-9 h-9 rounded-xl shadow-md group-hover:scale-105 transition-transform">
             <span class="text-xl font-extrabold text-slate-800 dark:text-white tracking-tight">
               Food<span class="text-primary">Rush</span>
             </span>

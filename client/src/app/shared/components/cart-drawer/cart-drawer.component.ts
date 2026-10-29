@@ -6,6 +6,7 @@ import { CartService } from '../../../core/services/cart.service';
 import { CouponService } from '../../../core/services/coupon.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { AuthService } from '../../../core/services/auth.service';
+import { getDishImage } from '../../../core/utils/asset-helpers';
 import { slideOverAnimation, backdropFadeAnimation } from '../../animations/animations';
 
 @Component({
@@ -50,7 +51,7 @@ import { slideOverAnimation, backdropFadeAnimation } from '../../animations/anim
         <div class="flex-1 overflow-y-auto px-5 py-4 space-y-3">
           @if (cartService.items().length === 0) {
             <div class="flex flex-col items-center justify-center h-full text-center py-16">
-              <div class="text-6xl mb-4">🛒</div>
+              <img src="/assets/illustrations/empty-cart.svg" alt="Empty Cart" class="w-48 h-36 mb-2">
               <p class="text-lg font-semibold text-slate-600 dark:text-slate-400">Your cart is empty</p>
               <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">Browse restaurants and add some delicious food!</p>
               <button
@@ -62,13 +63,14 @@ import { slideOverAnimation, backdropFadeAnimation } from '../../animations/anim
           }
 
           @for (item of cartService.items(); track item.menuItemId) {
-            <div class="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700">
+            <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-100 dark:border-slate-700">
+              <img [src]="getDishImage(item.name)" [alt]="item.name" class="w-12 h-12 rounded-lg object-cover flex-shrink-0 shadow-sm">
               <div class="flex-1 min-w-0">
                 <p class="font-semibold text-slate-800 dark:text-white text-sm truncate">{{ item.name }}</p>
                 @if (item.specialInstructions) {
                   <p class="text-xs text-slate-400 italic mt-0.5 truncate">{{ item.specialInstructions }}</p>
                 }
-                <p class="text-sm font-bold text-primary mt-1">\${{ (item.unitPrice * item.quantity).toFixed(2) }}</p>
+                <p class="text-sm font-bold text-primary mt-0.5">\${{ (item.unitPrice * item.quantity).toFixed(2) }}</p>
               </div>
               <!-- Qty Stepper -->
               <div class="flex items-center gap-1.5 flex-shrink-0">
@@ -214,6 +216,8 @@ export class CartDrawerComponent {
   couponCode = '';
   isValidatingCoupon = false;
   couponError = '';
+
+  readonly getDishImage = getDishImage;
 
   applyCoupon(): void {
     const cart = this.cartService.cart();

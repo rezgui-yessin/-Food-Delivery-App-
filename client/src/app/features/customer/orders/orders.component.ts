@@ -23,7 +23,7 @@ import { fadeAnimation } from '../../../shared/animations/animations';
           </div>
         } @else if (orders().length === 0) {
           <div class="text-center py-20">
-            <div class="text-6xl mb-4">📦</div>
+            <img src="/assets/illustrations/empty-orders.svg" alt="No Orders" class="w-48 h-36 mx-auto mb-2">
             <h2 class="text-xl font-semibold text-slate-600 dark:text-slate-400 mb-2">No orders yet</h2>
             <p class="text-slate-400 text-sm mb-6">Your order history will appear here.</p>
             <a routerLink="/" class="px-6 py-3 bg-primary text-white font-bold rounded-xl hover:bg-primary-hover transition-colors">

@@ -151,6 +151,14 @@ import { fadeAnimation } from '../../shared/animations/animations';
                   </a>
                 </div>
 
+                <div class="flex items-center gap-4 p-3 rounded-xl bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30">
+                  <img src="/assets/illustrations/delivery-courier.svg" alt="Courier on route" class="w-16 h-12 object-contain">
+                  <div>
+                    <p class="text-xs font-bold text-emerald-800 dark:text-emerald-300">Active Delivery Run</p>
+                    <p class="text-xs text-emerald-600 dark:text-emerald-400">Keep customer updated by advancing order status below</p>
+                  </div>
+                </div>
+
                 <!-- Customer Details -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                   <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
@@ -189,7 +197,7 @@ import { fadeAnimation } from '../../shared/animations/animations';
               </div>
             } @empty {
               <div class="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
-                <div class="text-4xl mb-3">📦</div>
+                <img src="/assets/illustrations/delivery-courier.svg" alt="No Active Deliveries" class="w-40 h-28 mx-auto mb-3 opacity-80">
                 <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-1">No Active Deliveries</h3>
                 <p class="text-sm text-slate-500">Go to the "Available Pickups" tab to accept a new delivery order.</p>
               </div>

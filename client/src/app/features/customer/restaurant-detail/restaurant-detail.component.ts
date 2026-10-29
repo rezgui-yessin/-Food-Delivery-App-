@@ -6,6 +6,7 @@ import { RestaurantService } from '../../../core/services/restaurant.service';
 import { MenuService } from '../../../core/services/menu.service';
 import { CartService } from '../../../core/services/cart.service';
 import { Restaurant, MenuItem } from '../../../core/models';
+import { getDishImage as getDishImageHelper, getRestaurantImage } from '../../../core/utils/asset-helpers';
 import { SkeletonMenuItemComponent } from '../../../shared/components/skeleton-card/skeleton-card.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
 import { modalScaleAnimation, fadeAnimation } from '../../../shared/animations/animations';
@@ -22,47 +23,61 @@ interface CategorySection {
   animations: [modalScaleAnimation, fadeAnimation],
   template: `
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900">
-      <!-- Restaurant Banner -->
+      <!-- Restaurant Banner with Real Photography -->
       @if (restaurant()) {
-        <div class="relative h-56 sm:h-72 bg-gradient-to-br from-slate-700 to-slate-900 overflow-hidden">
-          @if (restaurant()!.imageUrl) {
-            <img [src]="restaurant()!.imageUrl" [alt]="restaurant()!.name" class="w-full h-full object-cover opacity-60">
-          } @else {
-            <div class="w-full h-full flex items-center justify-center text-8xl opacity-30">🍽️</div>
-          }
-          <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
-          <div class="absolute bottom-0 left-0 right-0 p-6">
+        <div class="relative h-64 sm:h-80 overflow-hidden bg-slate-800">
+          <img
+            [src]="getRestaurantBanner(restaurant()!)"
+            [alt]="restaurant()!.name"
+            class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-black/30"></div>
+
+          <div class="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
             <div class="max-w-7xl mx-auto">
               <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
-                  <span class="inline-block px-2.5 py-1 text-xs font-bold bg-primary text-white rounded-full mb-2">{{ restaurant()!.cuisineType }}</span>
-                  <h1 class="text-3xl sm:text-4xl font-extrabold text-white">{{ restaurant()!.name }}</h1>
-                  <p class="text-slate-300 text-sm mt-1">📍 {{ restaurant()!.address }} · 📞 {{ restaurant()!.phone }}</p>
+                  <div class="flex items-center gap-2 mb-2">
+                    <span class="px-3 py-1 text-xs font-bold bg-primary text-white rounded-lg shadow-sm">
+                      {{ restaurant()!.cuisineType }}
+                    </span>
+                    <span class="px-2.5 py-1 text-xs font-bold bg-white/20 backdrop-blur-md text-white rounded-lg">
+                      ⭐ {{ restaurant()!.rating || 4.9 }} (500+ reviews)
+                    </span>
+                  </div>
+                  <h1 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight">{{ restaurant()!.name }}</h1>
+                  <p class="text-slate-200 text-sm mt-1.5 flex items-center gap-2">
+                    <span>📍 {{ restaurant()!.address }}</span>
+                    <span>•</span>
+                    <span>📞 {{ restaurant()!.phone }}</span>
+                  </p>
                 </div>
-                <span class="px-3 py-1.5 text-sm font-bold rounded-full shadow"
-                  [class]="restaurant()!.open ? 'bg-emerald-500 text-white' : 'bg-slate-500 text-slate-100'">
-                  {{ restaurant()!.open ? '● Open Now' : '● Closed' }}
-                </span>
+
+                <div class="flex items-center gap-3">
+                  <span class="px-3.5 py-1.5 text-sm font-bold rounded-xl shadow"
+                    [class]="restaurant()!.open ? 'bg-emerald-500 text-white' : 'bg-slate-600 text-slate-100'">
+                    {{ restaurant()!.open ? '● Open Now' : '● Closed' }}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
         </div>
       } @else {
-        <div class="h-56 bg-gradient-to-br from-slate-700 to-slate-900 animate-pulse"></div>
+        <div class="h-64 sm:h-80 bg-slate-800 animate-pulse"></div>
       }
 
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <!-- Sticky Category Tabs -->
         @if (categories().length > 0) {
-          <div class="sticky top-16 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-slate-50/90 dark:bg-slate-900/90 backdrop-blur-md pt-3 pb-0 border-b border-slate-100 dark:border-slate-800 mb-8">
-            <div class="flex gap-1 overflow-x-auto pb-3">
+          <div class="sticky top-16 z-20 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 bg-slate-50/95 dark:bg-slate-900/95 backdrop-blur-md pt-3 pb-0 border-b border-slate-200 dark:border-slate-800 mb-8">
+            <div class="flex gap-2 overflow-x-auto pb-3">
               @for (category of categories(); track category) {
                 <button
                   (click)="scrollToCategory(category)"
-                  class="px-4 py-2 text-sm font-semibold rounded-xl whitespace-nowrap transition-all flex-shrink-0"
+                  class="px-4 py-2 text-sm font-bold rounded-xl whitespace-nowrap transition-all flex-shrink-0"
                   [class]="activeCategory() === category
-                    ? 'bg-primary text-white'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'">
+                    ? 'bg-primary text-white shadow-md'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'">
                   {{ category }}
                 </button>
               }
@@ -78,50 +93,56 @@ interface CategorySection {
             }
           </div>
         } @else if (menuSections().length === 0) {
-          <div class="text-center py-20">
+          <div class="text-center py-20 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
             <div class="text-5xl mb-4">📋</div>
-            <p class="text-lg text-slate-500 dark:text-slate-400">No menu items available yet.</p>
+            <h3 class="text-lg font-bold text-slate-800 dark:text-white">No menu items available yet</h3>
+            <p class="text-sm text-slate-500">Check back later or browse other partner restaurants.</p>
           </div>
         } @else {
-          <div class="space-y-10">
+          <div class="space-y-12">
             @for (section of menuSections(); track section.name) {
-              <div [id]="section.name">
-                <h2 class="text-xl font-bold text-slate-800 dark:text-white mb-4 flex items-center gap-2">
-                  <span class="w-1 h-6 bg-primary rounded-full"></span>
-                  {{ section.name }}
-                </h2>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div [id]="section.name" class="scroll-mt-32">
+                <div class="flex items-center gap-3 mb-6">
+                  <span class="w-1.5 h-7 bg-primary rounded-full"></span>
+                  <h2 class="text-2xl font-bold text-slate-800 dark:text-white">{{ section.name }}</h2>
+                  <span class="text-xs text-slate-400 font-semibold">({{ section.items.length }} dishes)</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                   @for (item of section.items; track item.id) {
-                    <div class="flex gap-4 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:shadow-md hover:border-primary/30 transition-all group">
-                      <!-- Image -->
-                      <div class="w-24 h-24 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700">
-                        @if (item.imageUrl) {
-                          <img [src]="item.imageUrl" [alt]="item.name" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
-                        } @else {
-                          <div class="w-full h-full flex items-center justify-center text-3xl">🍴</div>
+                    <div class="flex gap-4 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 hover:shadow-lg hover:border-primary/40 transition-all group">
+                      <!-- Dish Image with Real Photography -->
+                      <div class="w-28 h-28 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 relative">
+                        <img
+                          [src]="getDishImage(item)"
+                          [alt]="item.name"
+                          class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500">
+                        @if (!item.available) {
+                          <div class="absolute inset-0 bg-black/60 backdrop-blur-[2px] flex items-center justify-center">
+                            <span class="text-[10px] font-bold text-white uppercase tracking-wider">Sold Out</span>
+                          </div>
                         }
                       </div>
 
-                      <!-- Info -->
+                      <!-- Dish Info -->
                       <div class="flex-1 min-w-0 flex flex-col justify-between">
                         <div>
                           <div class="flex items-start justify-between gap-2">
-                            <h3 class="font-semibold text-slate-800 dark:text-white leading-tight">{{ item.name }}</h3>
-                            @if (!item.available) {
-                              <span class="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full flex-shrink-0">Sold Out</span>
-                            }
+                            <h3 class="font-bold text-slate-800 dark:text-white text-base leading-snug group-hover:text-primary transition-colors">
+                              {{ item.name }}
+                            </h3>
                           </div>
                           <p class="text-xs text-slate-500 dark:text-slate-400 mt-1 line-clamp-2">{{ item.description }}</p>
                         </div>
 
-                        <div class="flex items-center justify-between mt-2">
-                          <span class="text-base font-bold text-primary">\${{ item.price.toFixed(2) }}</span>
+                        <div class="flex items-center justify-between mt-3 pt-2 border-t border-slate-100 dark:border-slate-700/60">
+                          <span class="text-lg font-extrabold text-primary">\${{ item.price.toFixed(2) }}</span>
                           <button
                             (click)="openAddModal(item)"
                             [disabled]="!item.available || !restaurant()?.open"
-                            class="flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold bg-primary hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl transition-all shadow-sm">
+                            class="flex items-center gap-1.5 px-4 py-2 text-xs font-bold bg-primary hover:bg-primary-hover disabled:opacity-40 disabled:cursor-not-allowed text-white rounded-xl transition-all shadow-sm">
                             <span class="text-base leading-none">+</span>
-                            Add
+                            <span>Add</span>
                           </button>
                         </div>
                       </div>
@@ -135,7 +156,7 @@ interface CategorySection {
       </div>
     </div>
 
-    <!-- Add Item Modal -->
+    <!-- Add Item Modal with Real Food Photo Preview -->
     <app-modal
       [isOpen]="isModalOpen()"
       [title]="selectedItem()?.name || ''"
@@ -143,20 +164,21 @@ interface CategorySection {
 
       @if (selectedItem()) {
         <div class="space-y-4">
-          @if (selectedItem()!.imageUrl) {
-            <img [src]="selectedItem()!.imageUrl" [alt]="selectedItem()!.name" class="w-full h-40 object-cover rounded-xl">
-          }
-          <p class="text-sm text-slate-500 dark:text-slate-400">{{ selectedItem()!.description }}</p>
+          <div class="w-full h-44 rounded-xl overflow-hidden shadow-sm relative">
+            <img [src]="getDishImage(selectedItem()!)" [alt]="selectedItem()!.name" class="w-full h-full object-cover">
+          </div>
+
+          <p class="text-sm text-slate-600 dark:text-slate-300 leading-relaxed">{{ selectedItem()!.description }}</p>
 
           <div class="text-2xl font-extrabold text-primary">\${{ selectedItem()!.price.toFixed(2) }}</div>
 
-          <!-- Quantity Selector -->
+          <!-- Quantity Stepper -->
           <div>
-            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Quantity</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Quantity</label>
             <div class="flex items-center gap-3">
               <button (click)="decreaseQty()" [disabled]="modalQty <= 1"
                 class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xl font-bold text-slate-700 dark:text-white hover:bg-primary hover:text-white disabled:opacity-40 transition-all">−</button>
-              <span class="w-10 text-center text-xl font-bold text-slate-800 dark:text-white">{{ modalQty }}</span>
+              <span class="w-10 text-center text-xl font-extrabold text-slate-800 dark:text-white">{{ modalQty }}</span>
               <button (click)="increaseQty()" [disabled]="modalQty >= 50"
                 class="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-700 flex items-center justify-center text-xl font-bold text-slate-700 dark:text-white hover:bg-primary hover:text-white disabled:opacity-40 transition-all">+</button>
             </div>
@@ -164,23 +186,23 @@ interface CategorySection {
 
           <!-- Special Instructions -->
           <div>
-            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Special Instructions (optional)</label>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-500 mb-2">Special Instructions (optional)</label>
             <textarea
               [(ngModel)]="specialInstructions"
-              placeholder="e.g. No onions, extra spicy, sauce on the side..."
+              placeholder="e.g. Dressing on the side, extra crispy, no onions..."
               rows="2"
               class="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white text-sm placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-primary/40 resize-none"></textarea>
           </div>
 
           <!-- Item Total -->
           <div class="flex items-center justify-between py-3 border-t border-slate-100 dark:border-slate-700">
-            <span class="text-sm text-slate-500">Item Total:</span>
-            <span class="text-xl font-extrabold text-primary">\${{ getItemTotal() }}</span>
+            <span class="text-sm font-semibold text-slate-500">Order Total:</span>
+            <span class="text-2xl font-extrabold text-primary">\${{ getItemTotal() }}</span>
           </div>
 
           <button
             (click)="addToCart()"
-            class="w-full py-3.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl transition-all shadow-lg shadow-primary/20">
+            class="w-full py-3.5 bg-primary hover:bg-primary-hover text-white font-bold rounded-xl transition-all shadow-lg shadow-primary/20 text-sm">
             Add to Cart — \${{ getItemTotal() }}
           </button>
         </div>
@@ -236,6 +258,14 @@ export class RestaurantDetailComponent implements OnInit {
         this.isLoading.set(false);
       }
     });
+  }
+
+  getRestaurantBanner(restaurant: Restaurant): string {
+    return getRestaurantImage(restaurant.name, restaurant.cuisineType, restaurant.imageUrl);
+  }
+
+  getDishImage(item: MenuItem): string {
+    return getDishImageHelper(item.name, item.imageUrl);
   }
 
   getItemTotal(): string {

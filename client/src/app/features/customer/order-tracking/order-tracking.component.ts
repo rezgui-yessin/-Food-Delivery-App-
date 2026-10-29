@@ -4,6 +4,7 @@ import { ActivatedRoute, RouterLink } from '@angular/router';
 import { OrderTrackingService } from '../../../core/services/order-tracking.service';
 import { OrderService } from '../../../core/services/order.service';
 import { Order, OrderStatus } from '../../../core/models';
+import { getDishImage } from '../../../core/utils/asset-helpers';
 import { fadeAnimation } from '../../../shared/animations/animations';
 
 interface TrackingStep {
@@ -90,15 +91,18 @@ interface TrackingStep {
             </div>
           </div>
 
-          <!-- Driver Card -->
-          @if (order()!.driverName && (order()!.status === OrderStatus.OUT_FOR_DELIVERY || order()!.status === OrderStatus.PICKED_UP)) {
-            <div class="bg-white dark:bg-slate-800 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 p-5 shadow-sm mb-6 flex items-center gap-4">
-              <div class="w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center text-2xl shadow-md">
-                🛵
-              </div>
-              <div class="flex-1">
-                <p class="font-bold text-slate-800 dark:text-white">{{ order()!.driverName }}</p>
-                <p class="text-sm text-emerald-600 dark:text-emerald-400">Your driver is on the way!</p>
+          <!-- Driver Card & Out for Delivery illustration -->
+          @if (order()!.status === OrderStatus.OUT_FOR_DELIVERY || order()!.status === OrderStatus.PICKED_UP) {
+            <div class="bg-white dark:bg-slate-800 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 p-5 shadow-sm mb-6 flex flex-col sm:flex-row items-center gap-5">
+              <img src="/assets/illustrations/delivery-courier.svg" alt="Delivery Courier" class="w-32 h-24 object-contain flex-shrink-0 animate-bounce">
+              <div class="flex-1 text-center sm:text-left">
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300 inline-block mb-1">
+                  On the Road
+                </span>
+                <p class="font-bold text-slate-800 dark:text-white text-lg">
+                  {{ order()!.driverName || 'Courier Assigned' }}
+                </p>
+                <p class="text-sm text-emerald-600 dark:text-emerald-400 font-medium">Your delicious meal is speeding to your door!</p>
               </div>
             </div>
           }
@@ -115,13 +119,16 @@ interface TrackingStep {
           <!-- Order Details -->
           <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-100 dark:border-slate-700 p-5 shadow-sm mb-6">
             <h3 class="font-bold text-slate-800 dark:text-white mb-3">Order Details</h3>
-            <div class="space-y-1.5 mb-3">
+            <div class="space-y-3 mb-3">
               @for (item of order()!.items; track item.menuItemId) {
-                <div class="flex justify-between text-sm">
-                  <span class="text-slate-600 dark:text-slate-400">
-                    <span class="font-bold text-slate-500 mr-1.5">×{{ item.quantity }}</span>{{ item.menuItemName }}
-                  </span>
-                  <span class="font-medium text-slate-800 dark:text-white">
+                <div class="flex items-center justify-between gap-3 text-sm">
+                  <div class="flex items-center gap-2.5 min-w-0">
+                    <img [src]="getDishImage(item.menuItemName)" [alt]="item.menuItemName" class="w-10 h-10 rounded-lg object-cover flex-shrink-0 shadow-sm border border-slate-100 dark:border-slate-700">
+                    <span class="text-slate-700 dark:text-slate-300 font-medium truncate">
+                      <span class="font-bold text-slate-500 mr-1.5">×{{ item.quantity }}</span>{{ item.menuItemName }}
+                    </span>
+                  </div>
+                  <span class="font-bold text-slate-800 dark:text-white flex-shrink-0">
                     \${{ ((item.unitPrice || 0) * item.quantity).toFixed(2) }}
                   </span>
                 </div>
@@ -161,6 +168,7 @@ interface TrackingStep {
   `
 })
 export class OrderTrackingComponent implements OnInit, OnDestroy {
+  readonly getDishImage = getDishImage;
   readonly trackingService = inject(OrderTrackingService);
   private readonly orderService = inject(OrderService);
   private readonly route = inject(ActivatedRoute);
