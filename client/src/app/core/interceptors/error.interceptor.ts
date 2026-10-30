@@ -1,6 +1,6 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, throwError } from 'rxjs';
+import { catchError, EMPTY, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
 
@@ -10,6 +10,11 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
+      // Completely silence all cart 403s — backend intentionally blocks non-CUSTOMER roles
+      if (error.status === 403 && req.url.includes('/api/cart')) {
+        return EMPTY;
+      }
+
       if (error.status === 401) {
         // Only redirect if not already on the login or register page
         if (!req.url.includes('/api/auth/login') && !req.url.includes('/api/auth/register')) {

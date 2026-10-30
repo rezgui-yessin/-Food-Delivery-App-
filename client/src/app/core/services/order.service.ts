@@ -19,6 +19,10 @@ export class OrderService {
     return this.http.get<Order>(`${this.baseUrl}/${id}`);
   }
 
+  getMyOrders(): Observable<Order[]> {
+    return this.getAll();
+  }
+
   getAll(restaurantId?: string, status?: OrderStatus): Observable<Order[]> {
     let params = new HttpParams();
     if (restaurantId) params = params.set('restaurantId', restaurantId);

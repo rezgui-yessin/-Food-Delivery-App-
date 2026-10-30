@@ -4,6 +4,7 @@ import { ReactiveFormsModule, NonNullableFormBuilder, Validators } from '@angula
 import { Router, RouterLink, ActivatedRoute } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
+import { getDashboardRoute } from '../../../core/utils/role-redirect';
 import { fadeAnimation } from '../../../shared/animations/animations';
 
 @Component({
@@ -127,8 +128,9 @@ export class LoginComponent {
       next: (res) => {
         this.isLoading.set(false);
         this.toastService.success('Welcome back!', `Signed in as ${res.user.fullName}`);
-        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl') || '/';
-        this.router.navigateByUrl(returnUrl);
+        const returnUrl = this.route.snapshot.queryParamMap.get('returnUrl');
+        const target = (returnUrl && returnUrl !== '/') ? returnUrl : getDashboardRoute(res.user.role);
+        this.router.navigateByUrl(target);
       },
       error: (err) => {
         this.isLoading.set(false);

@@ -1,27 +1,29 @@
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { ActivatedRoute } from '@angular/router';
 import { OrderService } from '../../core/services/order.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Order, OrderStatus } from '../../core/models';
+import { DashboardLayoutComponent } from '../../shared/components/dashboard-layout/dashboard-layout.component';
 import { fadeAnimation } from '../../shared/animations/animations';
 
 @Component({
   selector: 'app-driver-portal',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, DashboardLayoutComponent],
   animations: [fadeAnimation],
   template: `
-    <div @fadeAnimation class="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4">
-      <div class="max-w-4xl mx-auto">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-8">
+    <app-dashboard-layout>
+      <div @fadeAnimation class="p-6 max-w-5xl mx-auto space-y-6">
+        <!-- Action Row -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="w-12 h-12 rounded-2xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center text-2xl">
               🛵
             </div>
             <div>
-              <h1 class="text-3xl font-extrabold text-slate-800 dark:text-white">Delivery Driver Portal</h1>
-              <p class="text-slate-500 dark:text-slate-400 text-sm">Accept delivery jobs and manage live runs</p>
+              <h1 class="text-xl font-extrabold text-slate-800 dark:text-white">Courier Operations Portal</h1>
+              <p class="text-slate-500 dark:text-slate-400 text-xs">Pickups, ongoing runs, delivery history, and earnings</p>
             </div>
           </div>
 
@@ -36,10 +38,10 @@ import { fadeAnimation } from '../../shared/animations/animations';
         </div>
 
         <!-- Portal Tabs -->
-        <div class="flex items-center gap-3 border-b border-slate-200 dark:border-slate-800 mb-6">
+        <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto">
           <button
             (click)="activeTab.set('available')"
-            class="pb-3 px-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2"
+            class="pb-3 px-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap"
             [class.border-emerald-500]="activeTab() === 'available'"
             [class.text-emerald-600]="activeTab() === 'available'"
             [class.border-transparent]="activeTab() !== 'available'"
@@ -52,14 +54,40 @@ import { fadeAnimation } from '../../shared/animations/animations';
 
           <button
             (click)="activeTab.set('active')"
-            class="pb-3 px-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2"
+            class="pb-3 px-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap"
             [class.border-emerald-500]="activeTab() === 'active'"
             [class.text-emerald-600]="activeTab() === 'active'"
             [class.border-transparent]="activeTab() !== 'active'"
             [class.text-slate-500]="activeTab() !== 'active'">
             <span>🚀 My Active Deliveries</span>
             <span class="px-2 py-0.5 text-xs rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
-              {{ myDeliveries().length }}
+              {{ ongoingDeliveries().length }}
+            </span>
+          </button>
+
+          <button
+            (click)="activeTab.set('history')"
+            class="pb-3 px-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap"
+            [class.border-emerald-500]="activeTab() === 'history'"
+            [class.text-emerald-600]="activeTab() === 'history'"
+            [class.border-transparent]="activeTab() !== 'history'"
+            [class.text-slate-500]="activeTab() !== 'history'">
+            <span>📦 Delivery History</span>
+            <span class="px-2 py-0.5 text-xs rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              {{ completedDeliveries().length }}
+            </span>
+          </button>
+
+          <button
+            (click)="activeTab.set('earnings')"
+            class="pb-3 px-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2 whitespace-nowrap"
+            [class.border-emerald-500]="activeTab() === 'earnings'"
+            [class.text-emerald-600]="activeTab() === 'earnings'"
+            [class.border-transparent]="activeTab() !== 'earnings'"
+            [class.text-slate-500]="activeTab() !== 'earnings'">
+            <span>💰 Earnings</span>
+            <span class="px-2 py-0.5 text-xs rounded-full bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">
+              \${{ totalEarnings().toFixed(2) }}
             </span>
           </button>
         </div>
@@ -130,12 +158,12 @@ import { fadeAnimation } from '../../shared/animations/animations';
         <!-- Tab 2: My Active Deliveries -->
         @if (activeTab() === 'active') {
           <div class="space-y-6">
-            @for (order of myDeliveries(); track order.id) {
+            @for (order of ongoingDeliveries(); track order.id) {
               <div class="bg-white dark:bg-slate-800 rounded-2xl border-2 border-emerald-500/40 dark:border-emerald-500/20 p-6 shadow-lg space-y-5">
                 <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-700 pb-4">
                   <div>
                     <span class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300">
-                      {{ order.status.replace('_', ' ') }}
+                      {{ formatStatus(order.status) }}
                     </span>
                     <h3 class="text-xl font-bold text-slate-800 dark:text-white mt-1">Delivering to {{ order.customerName }}</h3>
                   </div>
@@ -204,21 +232,102 @@ import { fadeAnimation } from '../../shared/animations/animations';
             }
           </div>
         }
+
+        <!-- Tab 3: Completed Delivery History -->
+        @if (activeTab() === 'history') {
+          <div class="space-y-4">
+            @for (order of completedDeliveries(); track order.id) {
+              <div class="bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-5 shadow-sm flex items-center justify-between gap-4">
+                <div class="flex items-center gap-3.5">
+                  <div class="w-11 h-11 rounded-xl bg-emerald-100 dark:bg-emerald-950/40 text-emerald-600 flex items-center justify-center text-xl">
+                    ✅
+                  </div>
+                  <div>
+                    <div class="flex items-center gap-2">
+                      <span class="font-bold text-slate-800 dark:text-white text-sm">Order #{{ order.id.substring(0, 8).toUpperCase() }}</span>
+                      <span class="px-2 py-0.5 text-[10px] font-extrabold rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">Delivered</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mt-0.5">To: {{ order.customerName }} • {{ order.deliveryAddress }}</p>
+                  </div>
+                </div>
+                <div class="text-right">
+                  <span class="text-xs text-slate-400 block">Driver Payout</span>
+                  <span class="text-base font-extrabold text-emerald-600 dark:text-emerald-400">+$5.50</span>
+                </div>
+              </div>
+            } @empty {
+              <div class="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
+                <div class="text-4xl mb-3">📦</div>
+                <h3 class="text-lg font-bold text-slate-800 dark:text-white mb-1">No Completed Deliveries</h3>
+                <p class="text-sm text-slate-500">Completed runs will be archived and shown here.</p>
+              </div>
+            }
+          </div>
+        }
+
+        <!-- Tab 4: Earnings Overview -->
+        @if (activeTab() === 'earnings') {
+          <div class="space-y-6">
+            <!-- Earnings KPI Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+              <div class="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+                <span class="text-xs font-semibold uppercase text-slate-400 block mb-1">Total Payout</span>
+                <span class="text-3xl font-extrabold text-emerald-600 dark:text-emerald-400">\${{ totalEarnings().toFixed(2) }}</span>
+                <p class="text-xs text-slate-400 mt-1">Available for weekly payout</p>
+              </div>
+
+              <div class="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+                <span class="text-xs font-semibold uppercase text-slate-400 block mb-1">Completed Runs</span>
+                <span class="text-3xl font-extrabold text-slate-800 dark:text-white">{{ completedDeliveries().length }}</span>
+                <p class="text-xs text-slate-400 mt-1">Total customer drop-offs</p>
+              </div>
+
+              <div class="p-5 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 shadow-sm">
+                <span class="text-xs font-semibold uppercase text-slate-400 block mb-1">Rate per Drop-off</span>
+                <span class="text-3xl font-extrabold text-slate-800 dark:text-white">$5.50</span>
+                <p class="text-xs text-slate-400 mt-1">Base rate + distance bonus</p>
+              </div>
+            </div>
+          </div>
+        }
       </div>
-    </div>
+    </app-dashboard-layout>
   `
 })
 export class DriverPortalComponent implements OnInit {
   private readonly orderService = inject(OrderService);
   private readonly toastService = inject(ToastService);
+  private readonly route = inject(ActivatedRoute);
 
-  readonly activeTab = signal<'available' | 'active'>('available');
+  readonly activeTab = signal<'available' | 'active' | 'history' | 'earnings'>('available');
   readonly availableOrders = signal<Order[]>([]);
   readonly myDeliveries = signal<Order[]>([]);
 
+  readonly ongoingDeliveries = computed(() =>
+    this.myDeliveries().filter(o => o.status !== OrderStatus.DELIVERED && o.status !== OrderStatus.CANCELLED)
+  );
+
+  readonly completedDeliveries = computed(() =>
+    this.myDeliveries().filter(o => o.status === OrderStatus.DELIVERED)
+  );
+
+  readonly totalEarnings = computed(() =>
+    this.completedDeliveries().length * 5.50
+  );
+
   readonly OrderStatus = OrderStatus;
 
+  formatStatus(status: OrderStatus): string {
+    return (status || '').replace(/_/g, ' ');
+  }
+
   ngOnInit(): void {
+    this.route.params.subscribe(p => {
+      if (p['tab'] === 'active') this.activeTab.set('active');
+      else if (p['tab'] === 'history') this.activeTab.set('history');
+      else if (p['tab'] === 'earnings') this.activeTab.set('earnings');
+      else if (p['tab'] === 'available') this.activeTab.set('available');
+    });
     this.refresh();
   }
 

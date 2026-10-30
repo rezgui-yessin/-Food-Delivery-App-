@@ -5,6 +5,7 @@ import { Router, RouterLink } from '@angular/router';
 import { AuthService } from '../../../core/services/auth.service';
 import { ToastService } from '../../../core/services/toast.service';
 import { Role } from '../../../core/models';
+import { getDashboardRoute } from '../../../core/utils/role-redirect';
 import { fadeAnimation } from '../../../shared/animations/animations';
 
 @Component({
@@ -123,7 +124,7 @@ export class RegisterComponent {
       next: (res) => {
         this.isLoading.set(false);
         this.toastService.success('Account created!', `Welcome to FoodRush, ${res.user.fullName}!`);
-        this.router.navigate(['/']);
+        this.router.navigate([getDashboardRoute(res.user.role)]);
       },
       error: (err) => {
         this.isLoading.set(false);

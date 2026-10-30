@@ -6,25 +6,26 @@ import { OrderService } from '../../core/services/order.service';
 import { CouponService } from '../../core/services/coupon.service';
 import { ToastService } from '../../core/services/toast.service';
 import { Coupon, DiscountType, Order, Restaurant } from '../../core/models';
+import { DashboardLayoutComponent } from '../../shared/components/dashboard-layout/dashboard-layout.component';
 import { fadeAnimation } from '../../shared/animations/animations';
 
 @Component({
   selector: 'app-admin-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, DashboardLayoutComponent],
   animations: [fadeAnimation],
   template: `
-    <div @fadeAnimation class="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4">
-      <div class="max-w-7xl mx-auto space-y-8">
+    <app-dashboard-layout>
+      <div @fadeAnimation class="p-6 max-w-7xl mx-auto space-y-6">
         <!-- Top Admin Header -->
-        <div class="flex items-center justify-between">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <div class="flex items-center gap-3">
             <div class="w-12 h-12 rounded-2xl bg-indigo-500/10 text-indigo-600 flex items-center justify-center text-2xl">
               ⚡
             </div>
             <div>
-              <h1 class="text-3xl font-extrabold text-slate-800 dark:text-white">Super Admin Dashboard</h1>
-              <p class="text-slate-500 dark:text-slate-400 text-sm">Platform metrics, merchant management, and promotional campaigns</p>
+              <h1 class="text-xl font-extrabold text-slate-800 dark:text-white">Platform Administration</h1>
+              <p class="text-slate-500 dark:text-slate-400 text-xs">Platform metrics, merchant management, and promotional campaigns</p>
             </div>
           </div>
         </div>
@@ -222,7 +223,7 @@ import { fadeAnimation } from '../../shared/animations/animations';
           </div>
         </div>
       </div>
-    </div>
+    </app-dashboard-layout>
   `
 })
 export class AdminDashboardComponent implements OnInit {

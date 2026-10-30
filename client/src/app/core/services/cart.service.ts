@@ -62,16 +62,39 @@ export class CartService {
       }
     });
 
-    // When user logs in, try to fetch server cart
+    // Only fetch server cart for customers (or admins).
+    // Delivery drivers and restaurant owners must NEVER call the cart API (backend returns 403).
     effect(() => {
-      if (this.authService.isAuthenticated()) {
-        this.loadCart().subscribe({
-          error: () => {
-            // Local cart stays as is
-          }
-        });
+      const authenticated = this.authService.isAuthenticated();
+      const allowed = this.isCartAllowed();
+
+      if (authenticated && allowed) {
+        this.loadCart().subscribe({ error: () => {} });
+      } else if (authenticated && !allowed) {
+        // Non-customer role: wipe any leftover cart from localStorage
+        this.cart.set(null);
+        localStorage.removeItem(this.storageKey);
       }
     });
+  }
+
+  /** Returns true only for roles that are allowed to call the cart API (CUSTOMER & ADMIN). */
+  private isCartAllowed(): boolean {
+    // Use computed signals as primary source; fall back to raw localStorage for extra safety.
+    if (this.authService.isCustomer() || this.authService.isAdmin()) {
+      return true;
+    }
+    // Belt-and-suspenders: parse the stored user directly so we never rely solely on signal timing
+    try {
+      const raw = localStorage.getItem('food_delivery_user');
+      if (raw) {
+        const user = JSON.parse(raw) as { role?: string };
+        return user.role === 'CUSTOMER' || user.role === 'ADMIN';
+      }
+    } catch {
+      // ignore parse errors
+    }
+    return false;
   }
 
   toggleDrawer(open?: boolean): void {
@@ -85,6 +108,11 @@ export class CartService {
   loadCart(): Observable<Cart | null> {
     if (!this.authService.isAuthenticated()) {
       return of(this.cart());
+    }
+
+    // Server throws 403 if role is not CUSTOMER or ADMIN
+    if (!this.authService.isCustomer() && !this.authService.isAdmin()) {
+      return of(null);
     }
 
     return this.http.get<Cart>(this.baseUrl).pipe(

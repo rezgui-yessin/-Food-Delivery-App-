@@ -1,6 +1,7 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
+import { ActivatedRoute } from '@angular/router';
 import { OrderService } from '../../core/services/order.service';
 import { MenuService } from '../../core/services/menu.service';
 import { RestaurantService } from '../../core/services/restaurant.service';
@@ -8,30 +9,29 @@ import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
 import { MenuItem, Order, OrderStatus, Restaurant } from '../../core/models';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
+import { DashboardLayoutComponent } from '../../shared/components/dashboard-layout/dashboard-layout.component';
 import { getDishImage, PRESET_DISH_IMAGES } from '../../core/utils/asset-helpers';
 import { fadeAnimation } from '../../shared/animations/animations';
 
 @Component({
   selector: 'app-restaurant-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent, DashboardLayoutComponent],
   animations: [fadeAnimation],
   template: `
-    <div @fadeAnimation class="min-h-screen bg-slate-50 dark:bg-slate-900 py-8 px-4">
-      <div class="max-w-7xl mx-auto">
-        <!-- Dashboard Top Header -->
-        <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
-          <div>
-            <div class="flex items-center gap-3">
-              <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-xl">
-                👨‍🍳
-              </div>
-              <div>
-                <h1 class="text-3xl font-extrabold text-slate-800 dark:text-white">Restaurant Dashboard</h1>
-                <p class="text-slate-500 dark:text-slate-400 text-sm">
-                  Manage live kitchen orders and restaurant menu
-                </p>
-              </div>
+    <app-dashboard-layout>
+      <div @fadeAnimation class="p-6 max-w-7xl mx-auto space-y-6">
+        <!-- Dashboard Top Action Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary text-xl">
+              👨‍🍳
+            </div>
+            <div>
+              <h1 class="text-xl font-extrabold text-slate-800 dark:text-white">Kitchen Operations & Menu</h1>
+              <p class="text-slate-500 dark:text-slate-400 text-xs">
+                Manage live kitchen orders and menu catalog
+              </p>
             </div>
           </div>
 
@@ -60,7 +60,7 @@ import { fadeAnimation } from '../../shared/animations/animations';
         </div>
 
         <!-- Dashboard Navigation Tabs -->
-        <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 mb-8">
+        <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
           <button
             (click)="activeTab.set('orders')"
             class="pb-3 px-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2"
@@ -335,7 +335,7 @@ import { fadeAnimation } from '../../shared/animations/animations';
           </div>
         }
       </div>
-    </div>
+    </app-dashboard-layout>
 
     <!-- Modal for Adding New Dish -->
     <app-modal
@@ -426,6 +426,7 @@ export class RestaurantDashboardComponent implements OnInit {
   private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
   private readonly fb = inject(NonNullableFormBuilder);
+  private readonly route = inject(ActivatedRoute);
 
   readonly activeTab = signal<'orders' | 'menu'>('orders');
   readonly myRestaurants = signal<Restaurant[]>([]);
@@ -466,6 +467,14 @@ export class RestaurantDashboardComponent implements OnInit {
   });
 
   ngOnInit(): void {
+    this.route.params.subscribe(p => {
+      if (p['tab'] === 'menu') {
+        this.activeTab.set('menu');
+      } else if (p['tab'] === 'orders') {
+        this.activeTab.set('orders');
+      }
+    });
+
     this.restaurantService.getAll().subscribe({
       next: (restaurants) => {
         this.myRestaurants.set(restaurants);

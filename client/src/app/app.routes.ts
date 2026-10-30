@@ -36,7 +36,37 @@ export const routes: Routes = [
     loadComponent: () => import('./features/auth/register/register.component').then(m => m.RegisterComponent)
   },
   {
+    path: 'customer-dashboard',
+    loadComponent: () => import('./features/customer/customer-dashboard/customer-dashboard.component').then(m => m.CustomerDashboardComponent),
+    canActivate: [authGuard, roleGuard([Role.CUSTOMER, Role.ADMIN])]
+  },
+  {
+    path: 'customer-dashboard/orders',
+    loadComponent: () => import('./features/customer/customer-orders/customer-orders.component').then(m => m.CustomerOrdersComponent),
+    canActivate: [authGuard, roleGuard([Role.CUSTOMER, Role.ADMIN])]
+  },
+  {
+    path: 'customer-dashboard/profile',
+    loadComponent: () => import('./features/customer/customer-profile/customer-profile.component').then(m => m.CustomerProfileComponent),
+    canActivate: [authGuard, roleGuard([Role.CUSTOMER, Role.ADMIN])]
+  },
+  {
+    path: 'customer-dashboard/addresses',
+    loadComponent: () => import('./features/customer/customer-profile/customer-profile.component').then(m => m.CustomerProfileComponent),
+    canActivate: [authGuard, roleGuard([Role.CUSTOMER, Role.ADMIN])]
+  },
+  {
+    path: 'customer-dashboard/favorites',
+    loadComponent: () => import('./features/customer/customer-dashboard/customer-dashboard.component').then(m => m.CustomerDashboardComponent),
+    canActivate: [authGuard, roleGuard([Role.CUSTOMER, Role.ADMIN])]
+  },
+  {
     path: 'restaurant-dashboard',
+    loadComponent: () => import('./features/restaurant-owner/restaurant-dashboard.component').then(m => m.RestaurantDashboardComponent),
+    canActivate: [authGuard, roleGuard([Role.RESTAURANT_OWNER, Role.ADMIN])]
+  },
+  {
+    path: 'restaurant-dashboard/:tab',
     loadComponent: () => import('./features/restaurant-owner/restaurant-dashboard.component').then(m => m.RestaurantDashboardComponent),
     canActivate: [authGuard, roleGuard([Role.RESTAURANT_OWNER, Role.ADMIN])]
   },
@@ -46,7 +76,17 @@ export const routes: Routes = [
     canActivate: [authGuard, roleGuard([Role.DELIVERY_DRIVER, Role.ADMIN])]
   },
   {
+    path: 'driver-portal/:tab',
+    loadComponent: () => import('./features/driver/driver-portal.component').then(m => m.DriverPortalComponent),
+    canActivate: [authGuard, roleGuard([Role.DELIVERY_DRIVER, Role.ADMIN])]
+  },
+  {
     path: 'admin',
+    loadComponent: () => import('./features/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent),
+    canActivate: [authGuard, roleGuard([Role.ADMIN])]
+  },
+  {
+    path: 'admin/:tab',
     loadComponent: () => import('./features/admin/admin-dashboard.component').then(m => m.AdminDashboardComponent),
     canActivate: [authGuard, roleGuard([Role.ADMIN])]
   },

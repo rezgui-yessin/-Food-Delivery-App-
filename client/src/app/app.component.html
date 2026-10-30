@@ -7,8 +7,10 @@
     <router-outlet />
   </main>
 
-  <!-- Slide-Over Animated Cart Drawer -->
-  <app-cart-drawer />
+  <!-- Slide-Over Animated Cart Drawer — only for CUSTOMER / ADMIN / guests -->
+  @if (showCart()) {
+    <app-cart-drawer />
+  }
 
   <!-- Floating Toast Notification Container (top-right) -->
   <app-toast-container />
