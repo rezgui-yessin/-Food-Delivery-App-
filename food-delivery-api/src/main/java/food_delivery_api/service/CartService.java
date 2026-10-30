@@ -183,7 +183,8 @@ public class CartService {
                 request.deliveryAddress(),
                 orderItems,
                 request.couponCode(),
-                paymentMethod
+                paymentMethod,
+                request.scheduledAt()
         );
 
         OrderResponse placedOrder = orderService.create(orderCreateRequest, user);

@@ -1,6 +1,6 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { RouterLink } from '@angular/router';
+import { ActivatedRoute, RouterLink } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { debounceTime, distinctUntilChanged, Subject } from 'rxjs';
 import { RestaurantService } from '../../../core/services/restaurant.service';
@@ -24,20 +24,26 @@ interface CuisineFilter {
   template: `
     <div class="min-h-screen">
       <!-- Hero Section with Real HD Food Spread Background -->
-      <section class="relative bg-gradient-to-br from-slate-900 via-slate-800 to-primary/80 text-white overflow-hidden">
-        <div class="absolute inset-0 bg-[url('/assets/images/hero/hero-spread.jpg')] bg-cover bg-center opacity-30"></div>
-        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 text-center">
-          <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold mb-4 leading-tight">
+      <section class="relative min-h-[28rem] sm:min-h-[32rem] flex items-center bg-gradient-to-br from-slate-950 via-slate-900 to-primary/80 text-white overflow-hidden">
+        <div class="absolute inset-0 bg-[url('/assets/images/hero/hero-spread.jpg')] bg-cover bg-center scale-105 opacity-30 animate-soft-float"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_75%_25%,rgba(255,138,101,0.28),transparent_35%)]"></div>
+        <div class="relative max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-16 sm:py-20 text-center">
+          <div class="animate-rise-in">
+          <span class="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-xs font-semibold text-orange-100 backdrop-blur-md mb-5">
+            <span class="h-2 w-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            Fresh meals, right on time
+          </span>
+          <h1 class="text-4xl sm:text-5xl lg:text-7xl font-extrabold mb-4 leading-[1.05] tracking-tight">
             Delicious food,<br>
             <span class="text-primary bg-clip-text">delivered fast</span>
           </h1>
-          <p class="text-lg text-slate-300 mb-8 max-w-xl mx-auto">
+          <p class="text-base sm:text-lg text-slate-300 mb-8 max-w-xl mx-auto">
             Discover the best restaurants near you and get gourmet meals delivered in 30 minutes or less.
           </p>
 
           <!-- Search Bar -->
           <div class="max-w-xl mx-auto relative">
-            <div class="flex gap-3 bg-white rounded-2xl p-2 shadow-2xl">
+            <div class="flex flex-col sm:flex-row gap-2 bg-white rounded-2xl p-2 shadow-2xl shadow-black/20">
               <div class="flex-1 flex items-center gap-3 px-3">
                 <svg class="w-5 h-5 text-slate-400 flex-shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                   <path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" />
@@ -51,9 +57,10 @@ interface CuisineFilter {
               </div>
               <button
                 (click)="loadRestaurants()"
-                class="bg-primary hover:bg-primary-hover text-white font-bold px-6 py-2.5 rounded-xl transition-colors text-sm">
+                class="bg-primary hover:bg-primary-hover text-white font-bold px-6 py-3 rounded-xl transition-all text-sm hover:-translate-y-0.5 active:translate-y-0">
                 Search
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -87,6 +94,13 @@ interface CuisineFilter {
           </h2>
 
           <!-- Open Now Toggle -->
+          <div class="flex items-center gap-2 flex-wrap justify-end">
+          <select [(ngModel)]="ratingFilter" (ngModelChange)="filterRestaurants()" class="filter-select">
+            <option [ngValue]="0">Any rating</option><option [ngValue]="4">4+ stars</option><option [ngValue]="4.5">4.5+ stars</option>
+          </select>
+          <select [(ngModel)]="maxDeliveryTime" (ngModelChange)="filterRestaurants()" class="filter-select">
+            <option [ngValue]="0">Any delivery time</option><option [ngValue]="30">Under 30 min</option><option [ngValue]="45">Under 45 min</option>
+          </select>
           <label class="flex items-center gap-2.5 cursor-pointer">
             <div class="relative">
               <input type="checkbox" [(ngModel)]="openNowOnly" (ngModelChange)="filterRestaurants()" class="sr-only">
@@ -96,6 +110,7 @@ interface CuisineFilter {
             </div>
             <span class="text-sm font-medium text-slate-600 dark:text-slate-400">Open Now</span>
           </label>
+          </div>
         </div>
 
         <!-- Restaurant Grid with Real High-Res Photography -->
@@ -123,7 +138,7 @@ interface CuisineFilter {
         } @else {
           <div [@staggerListAnimation]="filteredRestaurants().length" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             @for (restaurant of filteredRestaurants(); track restaurant.id) {
-              <a [routerLink]="['/restaurants', restaurant.id]" class="group block rounded-2xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm hover:shadow-xl border border-slate-100 dark:border-slate-700 transition-all duration-300 hover:-translate-y-1">
+              <a [routerLink]="['/restaurants', restaurant.id]"               class="restaurant-card group block rounded-2xl overflow-hidden bg-white dark:bg-slate-800 shadow-sm hover:shadow-xl border border-slate-100 dark:border-slate-700">
                 <!-- Cover Image -->
                 <div class="relative h-48 overflow-hidden bg-slate-100 dark:bg-slate-700">
                   <img
@@ -183,6 +198,7 @@ interface CuisineFilter {
 })
 export class HomeComponent implements OnInit {
   private readonly restaurantService = inject(RestaurantService);
+  private readonly route = inject(ActivatedRoute);
 
   private readonly searchSubject = new Subject<string>();
   private allRestaurants = signal<Restaurant[]>([]);
@@ -193,6 +209,8 @@ export class HomeComponent implements OnInit {
 
   searchQuery = '';
   openNowOnly = false;
+  ratingFilter = 0;
+  maxDeliveryTime = 0;
 
   readonly skeletons = Array(6).fill(null);
 
@@ -223,11 +241,23 @@ export class HomeComponent implements OnInit {
       list = list.filter(r => r.open);
     }
 
+    if (this.ratingFilter > 0) list = list.filter(r => (r.rating ?? 0) >= this.ratingFilter);
+    if (this.maxDeliveryTime > 0) list = list.filter(r => (r.deliveryTimeMin ?? 30) <= this.maxDeliveryTime);
+
     return list;
   });
 
   ngOnInit(): void {
-    this.loadRestaurants();
+    this.route.queryParamMap.subscribe(params => {
+      const cuisine = params.get('cuisine');
+      const matchingCuisine = this.cuisineFilters.find(filter =>
+        filter.value.toLowerCase() === cuisine?.toLowerCase()
+      );
+      if (matchingCuisine) {
+        this.selectedCuisine.set(matchingCuisine.value);
+      }
+      this.loadRestaurants();
+    });
 
     this.searchSubject.pipe(
       debounceTime(350),

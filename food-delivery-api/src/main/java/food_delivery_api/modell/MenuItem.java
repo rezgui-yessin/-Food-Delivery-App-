@@ -29,5 +29,7 @@ public class MenuItem {
     private BigDecimal price;
     private  String category;
     private  boolean available;
+    private int stockQuantity;
+    private int preparationTimeMinutes;
+    private int sortOrder;
 }
-

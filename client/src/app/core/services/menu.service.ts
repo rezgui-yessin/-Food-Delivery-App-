@@ -36,5 +36,14 @@ export class MenuService {
     formData.append('file', file);
     return this.http.post<MenuItem>(`${this.baseUrl}/restaurants/${restaurantId}/menu-items/${id}/image`, formData);
   }
-}
 
+  deleteImage(restaurantId: string, id: string): Observable<MenuItem> {
+    return this.http.delete<MenuItem>(`${this.baseUrl}/restaurants/${restaurantId}/menu-items/${id}/image`);
+  }
+
+  toggleAvailability(restaurantId: string, id: string, available: boolean): Observable<MenuItem> {
+    return this.http.patch<MenuItem>(`${this.baseUrl}/restaurants/${restaurantId}/menu-items/${id}/availability`, {}, {
+      params: { available }
+    });
+  }
+}

@@ -23,5 +23,11 @@ public record MenuItemRequest(
         String category,
 
         boolean available
+        , int stockQuantity
+        , int preparationTimeMinutes
+        , int sortOrder
 ) {
+    public MenuItemRequest(String name, String description, BigDecimal price, String category, boolean available) {
+        this(name, description, price, category, available, 0, 20, 0);
+    }
 }

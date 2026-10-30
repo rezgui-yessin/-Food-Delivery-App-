@@ -1,6 +1,6 @@
 import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { Observable, catchError, of, tap, throwError } from 'rxjs';
+import { Observable, of, tap } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import { Cart, CartItem, Order, PaymentMethod } from '../models';
 import { AuthService } from './auth.service';
@@ -44,10 +44,11 @@ export class CartService {
     return this.items().reduce((sum, item) => sum + (item.unitPrice * item.quantity), 0);
   });
   readonly deliveryFee = computed(() => {
-    return this.itemCount() > 0 ? 3.99 : 0;
+    return this.itemCount() > 0 ? 2.99 : 0;
   });
+  readonly taxAmount = computed(() => Math.round(Math.max(0, this.subtotal() - this.discountAmount()) * 0.0825 * 100) / 100);
   readonly totalAmount = computed(() => {
-    const raw = this.subtotal() - this.discountAmount() + this.deliveryFee();
+    const raw = this.subtotal() - this.discountAmount() + this.taxAmount() + this.deliveryFee();
     return Math.max(0, Math.round(raw * 100) / 100);
   });
 
@@ -116,12 +117,7 @@ export class CartService {
     }
 
     return this.http.get<Cart>(this.baseUrl).pipe(
-      tap(cart => {
-        this.cart.set(cart);
-      }),
-      catchError(err => {
-        return of(null);
-      })
+      tap(cart => this.cart.set(cart))
     );
   }
 
@@ -173,7 +169,7 @@ export class CartService {
             this.pendingItem.set(item);
             this.conflictModalOpen.set(true);
           } else {
-            this.executeLocalAddItem(item);
+            this.toastService.error('Cart update failed', 'The item could not be added. Please try again.');
           }
         }
       });
@@ -242,7 +238,7 @@ export class CartService {
           this.cart.set(updatedCart);
         },
         error: () => {
-          this.updateLocalQuantity(menuItemId, newQuantity);
+          this.toastService.error('Cart update failed', 'The quantity could not be updated. Please try again.');
         }
       });
     } else {
@@ -282,7 +278,7 @@ export class CartService {
           this.toastService.info('Item Removed', 'Item removed from your cart.');
         },
         error: () => {
-          this.removeLocalItem(menuItemId);
+          this.toastService.error('Cart update failed', 'The item could not be removed. Please try again.');
         }
       });
     } else {
@@ -316,9 +312,7 @@ export class CartService {
     this.discountAmount.set(0);
 
     if (this.authService.isAuthenticated()) {
-      return this.http.delete<void>(this.baseUrl).pipe(
-        catchError(() => of(undefined))
-      );
+      return this.http.delete<void>(this.baseUrl).pipe(tap(() => this.cart.set(null)));
     }
     return of(undefined);
   }
@@ -340,6 +334,7 @@ export class CartService {
     deliveryAddress: string;
     paymentMethod: PaymentMethod;
     couponCode?: string;
+    scheduledAt?: string;
   }): Observable<Order> {
     return this.http.post<Order>(`${this.baseUrl}/checkout`, data);
   }
@@ -354,4 +349,3 @@ export class CartService {
     }
   }
 }
-

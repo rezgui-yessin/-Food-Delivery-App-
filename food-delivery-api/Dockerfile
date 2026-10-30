@@ -34,7 +34,7 @@ USER spring:spring
 COPY --from=builder --chown=spring:spring /build/target/*.jar app.jar
 
 # Expose API port
-EXPOSE 8081
+EXPOSE 8082
 
 # Container JVM optimization flags:
 # - UseContainerSupport: enables Docker cgroup memory awareness
@@ -43,4 +43,3 @@ EXPOSE 8081
 ENV JAVA_OPTS="-XX:+UseContainerSupport -XX:MaxRAMPercentage=75.0 -XX:+UseG1GC -Djava.security.egd=file:/dev/./urandom"
 
 ENTRYPOINT ["sh", "-c", "java $JAVA_OPTS -jar app.jar"]
-

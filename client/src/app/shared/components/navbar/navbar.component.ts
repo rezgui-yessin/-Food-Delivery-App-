@@ -1,6 +1,8 @@
 import { Component, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
-import { Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
+import { toSignal } from '@angular/core/rxjs-interop';
+import { filter, map, startWith } from 'rxjs/operators';
 import { AuthService } from '../../../core/services/auth.service';
 import { CartService } from '../../../core/services/cart.service';
 import { ThemeService } from '../../../core/services/theme.service';
@@ -121,12 +123,24 @@ export class NavbarComponent {
   readonly themeService = inject(ThemeService);
   private readonly router = inject(Router);
 
+  private readonly currentUrl = toSignal(
+    this.router.events.pipe(
+      filter((event): event is NavigationEnd => event instanceof NavigationEnd),
+      map(event => event.urlAfterRedirects),
+      startWith(this.router.url)
+    ),
+    { initialValue: this.router.url }
+  );
+
   readonly isDashboardRoute = computed(() => {
-    const url = this.router.url;
-    return url.startsWith('/customer-dashboard') ||
+    const url = this.currentUrl();
+    return url.startsWith('/customer') ||
+           url.startsWith('/restaurant') ||
+           url.startsWith('/driver') ||
+           url.startsWith('/admin') ||
+           url.startsWith('/customer-dashboard') ||
            url.startsWith('/restaurant-dashboard') ||
-           url.startsWith('/driver-portal') ||
-           url.startsWith('/admin');
+           url.startsWith('/driver-portal');
   });
 
   readonly dashboardLink = computed(() => {

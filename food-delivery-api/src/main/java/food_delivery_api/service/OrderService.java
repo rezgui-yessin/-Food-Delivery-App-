@@ -14,6 +14,7 @@ import food_delivery_api.modell.OrderItem;
 import food_delivery_api.modell.OrderStatus;
 import food_delivery_api.modell.PaymentMethod;
 import food_delivery_api.modell.PaymentStatus;
+import food_delivery_api.modell.Notification;
 import food_delivery_api.modell.Restaurant;
 import food_delivery_api.modell.Role;
 import food_delivery_api.modell.User;
@@ -21,6 +22,7 @@ import food_delivery_api.repository.MenuItemRepository;
 import food_delivery_api.repository.OrderRepository;
 import food_delivery_api.repository.RestaurantRepository;
 import food_delivery_api.repository.UserRepository;
+import food_delivery_api.repository.NotificationRepository;
 import food_delivery_api.security.AuthenticatedUser;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -49,6 +51,7 @@ public class OrderService {
     private final OrderTrackingService orderTrackingService;
     private final CouponService couponService;
     private final StripeService stripeService;
+    private final NotificationRepository notificationRepository;
 
     public OrderResponse create(OrderCreateRequest request, AuthenticatedUser user) {
         Restaurant restaurant = restaurantRepository.findById(request.restaurantId())
@@ -110,7 +113,13 @@ public class OrderService {
             discount = couponService.applyAndRedeemCoupon(appliedCouponCode, restaurant.getId(), subtotal);
         }
 
-        BigDecimal finalTotal = subtotal.subtract(discount).max(BigDecimal.ZERO);
+        BigDecimal taxableSubtotal = subtotal.subtract(discount).max(BigDecimal.ZERO);
+        BigDecimal taxRate = restaurant.getTaxRate() != null ? restaurant.getTaxRate() : BigDecimal.ZERO;
+        BigDecimal taxAmount = taxableSubtotal.multiply(taxRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        BigDecimal deliveryFee = restaurant.getDeliveryFee() != null ? restaurant.getDeliveryFee() : BigDecimal.ZERO;
+        BigDecimal finalTotal = taxableSubtotal.add(taxAmount).add(deliveryFee);
+        BigDecimal commissionRate = restaurant.getCommissionRate() != null ? restaurant.getCommissionRate() : BigDecimal.ZERO;
+        BigDecimal commissionAmount = taxableSubtotal.multiply(commissionRate).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
 
         PaymentMethod paymentMethod = request.paymentMethod() != null ? request.paymentMethod() : PaymentMethod.CARD;
         PaymentStatus initialPaymentStatus = finalTotal.compareTo(BigDecimal.ZERO) == 0
@@ -124,10 +133,19 @@ public class OrderService {
                 .customerName(request.customerName())
                 .customerPhone(request.customerPhone())
                 .deliveryAddress(request.deliveryAddress())
+                .deliveryLatitude(request.deliveryLatitude())
+                .deliveryLongitude(request.deliveryLongitude())
+                .restaurantLatitude(restaurant.getLatitude())
+                .restaurantLongitude(restaurant.getLongitude())
                 .items(items)
                 .couponCode(appliedCouponCode)
                 .subtotalAmount(subtotal)
                 .discountAmount(discount)
+                .deliveryFee(deliveryFee)
+                .taxAmount(taxAmount)
+                .commissionAmount(commissionAmount)
+                .estimatedDeliveryMinutes(restaurant.getDeliveryTimeMin())
+                .scheduledAt(request.scheduledAt())
                 .totalAmount(finalTotal)
                 .paymentMethod(paymentMethod)
                 .paymentStatus(initialPaymentStatus)
@@ -156,7 +174,31 @@ public class OrderService {
                 ? "Order placed with coupon " + appliedCouponCode + " (saved $" + discount + ")"
                 : "Order placed successfully";
         orderTrackingService.notifyStatusUpdate(saved, eventMsg);
+        createCustomerNotification(saved, "Order placed", eventMsg);
         return OrderResponse.from(saved);
+    }
+
+    public OrderResponse reorder(String id, AuthenticatedUser user) {
+        Order previous = getOwnedOrder(id, user);
+        OrderCreateRequest request = new OrderCreateRequest(
+                previous.getRestaurantId(),
+                previous.getCustomerName(),
+                previous.getCustomerPhone(),
+                previous.getDeliveryAddress(),
+                previous.getItems().stream()
+                        .map(item -> new OrderItemRequest(item.getMenuItemId(), item.getQuantity(), item.getSpecialInstructions()))
+                        .toList(),
+                null,
+                PaymentMethod.CARD);
+        return create(request, user);
+    }
+
+    private Order getOwnedOrder(String id, AuthenticatedUser user) {
+        if (user == null) throw new AccessDeniedException("Authentication required");
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
+        if (user.role() == Role.ADMIN || (user.id().equals(order.getCustomerId()))) return order;
+        throw new AccessDeniedException("Not allowed to reorder this order");
     }
 
     public List<OrderResponse> getAll(String restaurantId, OrderStatus status, AuthenticatedUser user) {
@@ -245,6 +287,16 @@ public class OrderService {
         return OrderResponse.from(saved);
     }
 
+    public void rejectOrder(String id, AuthenticatedUser user) {
+        if (user == null || (user.role() != Role.DELIVERY_DRIVER && user.role() != Role.ADMIN)) {
+            throw new AccessDeniedException("Only delivery drivers can reject orders");
+        }
+        Order order = findOrThrow(id);
+        if (order.getStatus() != OrderStatus.READY_FOR_PICKUP || order.getDriverId() != null) {
+            throw new BadRequestException("Order is no longer available for rejection");
+        }
+    }
+
     public OrderResponse updateStatus(String id, OrderStatusUpdateRequest request, AuthenticatedUser user) {
         Order order = findOrThrow(id);
         requireCanAccess(order, user);
@@ -311,7 +363,21 @@ public class OrderService {
 
         Order saved = orderRepository.save(order);
         orderTrackingService.notifyStatusUpdate(saved, "Order status changed to " + next);
+        createCustomerNotification(saved, "Order update", "Your order is now " + next.name().replace('_', ' ').toLowerCase() + ".");
         return OrderResponse.from(saved);
+    }
+
+    private void createCustomerNotification(Order order, String title, String message) {
+        if (order.getCustomerId() == null) return;
+        notificationRepository.save(Notification.builder()
+                .userId(order.getCustomerId())
+                .title(title)
+                .message(message)
+                .type("ORDER_STATUS")
+                .referenceId(order.getId())
+                .read(false)
+                .createdAt(Instant.now())
+                .build());
     }
 
     public SseEmitter subscribeToTracking(String id, AuthenticatedUser user) {

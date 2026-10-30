@@ -46,8 +46,15 @@ export class OrderService {
     return this.http.post<Order>(`${this.baseUrl}/${id}/accept`, {});
   }
 
+  rejectOrder(id: string): Observable<void> {
+    return this.http.post<void>(`${this.baseUrl}/${id}/reject`, {});
+  }
+
   updateStatus(id: string, status: OrderStatus, note?: string): Observable<Order> {
     return this.http.patch<Order>(`${this.baseUrl}/${id}/status`, { status, note });
   }
-}
 
+  reorder(id: string): Observable<Order> {
+    return this.http.post<Order>(`${this.baseUrl}/${id}/reorder`, {});
+  }
+}

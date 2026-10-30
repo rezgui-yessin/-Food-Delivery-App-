@@ -9,6 +9,8 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 
@@ -92,5 +94,17 @@ public class GlobalExceptionHandler {
                                                             HttpServletRequest request) {
         return build(HttpStatus.FORBIDDEN,
                 "You do not have permission to perform this action", request, null);
+    }
+
+    @ExceptionHandler(MethodArgumentTypeMismatchException.class)
+    public ResponseEntity<ErrorResponse> handleTypeMismatch(MethodArgumentTypeMismatchException ex,
+                                                             HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Invalid value for parameter: " + ex.getName(), request, null);
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex,
+                                                                    HttpServletRequest request) {
+        return build(HttpStatus.BAD_REQUEST, "Validation failed", request, null);
     }
 }

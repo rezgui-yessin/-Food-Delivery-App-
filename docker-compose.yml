@@ -1,7 +1,6 @@
 services:
   mongodb:
     image: mongo:7.0
-    container_name: food-delivery-mongodb
     restart: unless-stopped
     ports:
       - "27017:27017"
@@ -20,10 +19,9 @@ services:
 
   mongo-express:
     image: mongo-express:latest
-    container_name: food-delivery-mongo-express
     restart: unless-stopped
     ports:
-      - "8082:8081"
+      - "8083:8081"
     environment:
       ME_CONFIG_MONGODB_SERVER: mongodb
       ME_CONFIG_MONGODB_PORT: 27017
@@ -38,10 +36,9 @@ services:
     build:
       context: ./food-delivery-api
       dockerfile: Dockerfile
-    container_name: food-delivery-api
     restart: unless-stopped
     ports:
-      - "8081:8081"
+      - "8082:8082"
     environment:
       - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/food_delivery_db
       - SPRING_MONGODB_URI=mongodb://mongodb:27017/food_delivery_db
@@ -58,6 +55,18 @@ services:
     networks:
       - food-delivery-net
 
+  frontend:
+    build:
+      context: ./client
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
+    networks:
+      - food-delivery-net
+
 networks:
   food-delivery-net:
     driver: bridge
@@ -65,4 +74,3 @@ networks:
 volumes:
   mongodb_data:
     driver: local
-

@@ -23,14 +23,14 @@ services:
 
   # =======================================================
   # Mongo Express - Visual Database Management Web UI
-  # Accessible at: http://localhost:8082
+  # Accessible at: http://localhost:8083
   # =======================================================
   mongo-express:
     image: mongo-express:latest
     container_name: food-delivery-mongo-express
     restart: unless-stopped
     ports:
-      - "8082:8081"
+      - "8083:8081"
     environment:
       ME_CONFIG_MONGODB_SERVER: mongodb
       ME_CONFIG_MONGODB_PORT: 27017
@@ -43,8 +43,8 @@ services:
 
   # =======================================================
   # Food Delivery Spring Boot API Service
-  # Accessible at: http://localhost:8081
-  # Swagger Docs:  http://localhost:8081/swagger-ui.html
+  # Accessible at: http://localhost:8082
+  # Swagger Docs:  http://localhost:8082/swagger-ui.html
   # =======================================================
   api:
     build:
@@ -53,7 +53,7 @@ services:
     container_name: food-delivery-api
     restart: unless-stopped
     ports:
-      - "8081:8081"
+      - "8082:8082"
     environment:
       - SPRING_DATA_MONGODB_URI=mongodb://mongodb:27017/food_delivery_db
       - SPRING_MONGODB_URI=mongodb://mongodb:27017/food_delivery_db
@@ -77,4 +77,3 @@ networks:
 volumes:
   mongodb_data:
     driver: local
-

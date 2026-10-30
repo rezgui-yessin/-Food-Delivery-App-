@@ -1,6 +1,6 @@
 import { HttpErrorResponse, HttpInterceptorFn } from '@angular/common/http';
 import { inject } from '@angular/core';
-import { catchError, EMPTY, throwError } from 'rxjs';
+import { catchError, throwError } from 'rxjs';
 import { AuthService } from '../services/auth.service';
 import { ToastService } from '../services/toast.service';
 
@@ -10,11 +10,6 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
 
   return next(req).pipe(
     catchError((error: HttpErrorResponse) => {
-      // Completely silence all cart 403s — backend intentionally blocks non-CUSTOMER roles
-      if (error.status === 403 && req.url.includes('/api/cart')) {
-        return EMPTY;
-      }
-
       if (error.status === 401) {
         // Only redirect if not already on the login or register page
         if (!req.url.includes('/api/auth/login') && !req.url.includes('/api/auth/register')) {
@@ -28,7 +23,9 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
         // but notify with warning if not silenced
         console.warn('Resource conflict (409):', error.error?.message || error.message);
       } else if (error.status === 0) {
-        toastService.error('Connection Failed', 'Cannot connect to backend API server at localhost:8081.');
+        toastService.error('Connection Failed', 'Check your network connection and try again.');
+      } else if (error.status === 429) {
+        toastService.warning('Too many requests', 'Please wait a moment before trying again.');
       } else if (error.status >= 500) {
         const errorMsg = error.error?.message || 'An unexpected server error occurred.';
         toastService.error('Server Error', errorMsg);
@@ -38,4 +35,3 @@ export const errorInterceptor: HttpInterceptorFn = (req, next) => {
     })
   );
 };
-

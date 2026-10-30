@@ -1,0 +1,5 @@
+.env
+.env.production
+node_modules/
+client/dist/
+food-delivery-api/target/

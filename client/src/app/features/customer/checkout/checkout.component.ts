@@ -55,6 +55,10 @@ import { fadeAnimation } from '../../../shared/animations/animations';
                         <p class="mt-1 text-xs text-red-500">Name must be at least 3 characters.</p>
                       }
                     </div>
+                    <div>
+                      <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Scheduled delivery (optional)</label>
+                      <input formControlName="scheduledAt" type="datetime-local" class="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900">
+                    </div>
 
                     <!-- Phone -->
                     <div>
@@ -219,6 +223,10 @@ import { fadeAnimation } from '../../../shared/animations/animations';
                     <span>Delivery fee</span>
                     <span>\${{ cartService.deliveryFee().toFixed(2) }}</span>
                   </div>
+                  <div class="flex justify-between text-sm text-slate-500 dark:text-slate-400">
+                    <span>Tax</span>
+                    <span>\${{ cartService.taxAmount().toFixed(2) }}</span>
+                  </div>
                   <div class="flex justify-between font-extrabold text-slate-900 dark:text-white text-lg pt-2 border-t border-slate-100 dark:border-slate-700">
                     <span>Total</span>
                     <span class="text-primary">\${{ cartService.totalAmount().toFixed(2) }}</span>
@@ -249,7 +257,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
     customerName: ['', [Validators.required, Validators.minLength(3)]],
     customerPhone: ['', [Validators.required, Validators.pattern(/^\+?[0-9 ]{7,15}$/)]],
     deliveryAddress: ['', [Validators.required, Validators.minLength(5)]],
-    cardholderName: ['']
+    cardholderName: [''],
+    scheduledAt: ['']
   });
 
   isInvalid(field: string): boolean {
@@ -284,7 +293,7 @@ export class CheckoutComponent implements OnInit, OnDestroy {
 
     this.isSubmitting.set(true);
 
-    const { customerName, customerPhone, deliveryAddress, cardholderName } = this.checkoutForm.getRawValue();
+    const { customerName, customerPhone, deliveryAddress, cardholderName, scheduledAt } = this.checkoutForm.getRawValue();
     const paymentMethod = this.selectedPayment === 'CARD' ? PaymentMethod.CARD : PaymentMethod.CASH_ON_DELIVERY;
     const couponCode = this.cartService.appliedCoupon() || undefined;
 
@@ -293,7 +302,8 @@ export class CheckoutComponent implements OnInit, OnDestroy {
       customerPhone,
       deliveryAddress,
       paymentMethod,
-      couponCode
+      couponCode,
+      scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined
     }).subscribe({
       next: async (order) => {
         if (paymentMethod === PaymentMethod.CARD) {

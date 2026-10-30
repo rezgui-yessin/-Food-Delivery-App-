@@ -65,6 +65,11 @@ export class AuthService {
     return this.userRole() === role;
   }
 
+  updateCurrentUser(user: User): void {
+    localStorage.setItem(this.userStorageKey, JSON.stringify(user));
+    this.currentUserSignal.set(user);
+  }
+
   private setSession(authResponse: AuthResponse): void {
     localStorage.setItem(this.tokenStorageKey, authResponse.token);
     localStorage.setItem(this.userStorageKey, JSON.stringify(authResponse.user));
@@ -86,4 +91,3 @@ export class AuthService {
     }
   }
 }
-

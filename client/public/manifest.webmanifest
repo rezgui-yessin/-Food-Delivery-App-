@@ -1,0 +1,9 @@
+{
+  "name": "FoodRush Delivery",
+  "short_name": "FoodRush",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#f97316",
+  "icons": []
+}

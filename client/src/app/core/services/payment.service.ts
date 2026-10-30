@@ -2,7 +2,7 @@ import { Injectable, inject, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, from, switchMap, throwError } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { PaymentIntentResponse } from '../models';
+import { Order, PaymentIntentResponse } from '../models';
 import { ToastService } from './toast.service';
 
 declare global {
@@ -84,6 +84,14 @@ export class PaymentService {
 
   createPaymentIntent(orderId: string): Observable<PaymentIntentResponse> {
     return this.http.post<PaymentIntentResponse>(`${this.baseUrl}/orders/${orderId}/create-intent`, {});
+  }
+
+  retryPayment(orderId: string): Observable<PaymentIntentResponse> {
+    return this.http.post<PaymentIntentResponse>(`${this.baseUrl}/orders/${orderId}/retry`, {});
+  }
+
+  getPaymentHistory(): Observable<Order[]> {
+    return this.http.get<Order[]>(`${this.baseUrl}/history`);
   }
 
   confirmTestPayment(orderId: string): Observable<any> {

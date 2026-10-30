@@ -52,7 +52,7 @@ export class OrderTrackingService implements OnDestroy {
       this.reconnectAttempts = 0;
     };
 
-    this.eventSource.onmessage = (event) => {
+    const handleEvent = (event: MessageEvent<string>) => {
       try {
         const data = JSON.parse(event.data) as OrderTrackingEvent;
         this.trackingEvent.set(data);
@@ -68,6 +68,9 @@ export class OrderTrackingService implements OnDestroy {
         console.error('Failed to parse SSE event:', e);
       }
     };
+    // The backend names events "order-status"; named SSE events do not reach onmessage.
+    this.eventSource.addEventListener('order-status', handleEvent);
+    this.eventSource.onmessage = handleEvent;
 
     this.eventSource.onerror = () => {
       this.connectionStatus.set('error');

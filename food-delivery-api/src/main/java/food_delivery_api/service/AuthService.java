@@ -55,6 +55,7 @@ public class AuthService {
 
     public AuthResponse login(LoginRequest request) {
         User user = userRepository.findByEmail(normalize(request.email()))
+                .filter(u -> u.isActive() && u.isApproved())
                 .filter(u -> passwordEncoder.matches(request.password(), u.getPasswordHash()))
                 .orElseThrow(() -> new InvalidCredentialsException("Invalid email or password"));
 

@@ -1,6 +1,11 @@
 <div class="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-slate-100 transition-colors duration-200">
   <!-- Sticky Global Glassmorphic Navbar -->
   <app-navbar />
+  @if (!connectivity.online()) {
+    <div role="status" class="bg-amber-500 text-white text-center text-sm font-semibold px-4 py-2">
+      You are offline. Reconnect to load fresh restaurant, order, and payment data.
+    </div>
+  }
 
   <!-- Main View Outlet with fade transitions -->
   <main class="flex-1">
@@ -14,4 +19,7 @@
 
   <!-- Floating Toast Notification Container (top-right) -->
   <app-toast-container />
+
+  <!-- Global Confirm Dialog -->
+  <app-confirm-dialog />
 </div>

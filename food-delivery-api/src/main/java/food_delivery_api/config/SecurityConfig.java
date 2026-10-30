@@ -11,6 +11,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.beans.factory.annotation.Value;
 
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -24,10 +25,14 @@ public class SecurityConfig {
 
     private final JwtService jwtService;
     private final SecurityErrorHandler securityErrorHandler;
+    private final RateLimitFilter rateLimitFilter;
+    @Value("${app.cors.allowed-origin-patterns:*}")
+    private String allowedOriginPatterns;
 
-    public SecurityConfig(JwtService jwtService, SecurityErrorHandler securityErrorHandler) {
+    public SecurityConfig(JwtService jwtService, SecurityErrorHandler securityErrorHandler, RateLimitFilter rateLimitFilter) {
         this.jwtService = jwtService;
         this.securityErrorHandler = securityErrorHandler;
+        this.rateLimitFilter = rateLimitFilter;
     }
 
     @Bean
@@ -48,6 +53,8 @@ public class SecurityConfig {
                                 "/swagger-resources/**",
                                 "/webjars/**"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/restaurants/*/reviews")
+                        .hasAnyRole("CUSTOMER", "ADMIN")
                         .requestMatchers(HttpMethod.GET, "/api/restaurants/**").permitAll()
                         .requestMatchers("/api/restaurants/**").hasAnyRole("RESTAURANT_OWNER", "ADMIN")
                         .anyRequest().authenticated())
@@ -55,7 +62,8 @@ public class SecurityConfig {
                         .authenticationEntryPoint(securityErrorHandler)
                         .accessDeniedHandler(securityErrorHandler))
                 .addFilterBefore(new JwtAuthenticationFilter(jwtService),
-                        UsernamePasswordAuthenticationFilter.class);
+                        UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(rateLimitFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
@@ -63,7 +71,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOriginPatterns(List.of(allowedOriginPatterns.split(",")));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

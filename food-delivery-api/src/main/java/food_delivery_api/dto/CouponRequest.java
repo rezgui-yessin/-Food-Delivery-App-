@@ -7,8 +7,6 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 
 import java.math.BigDecimal;
-import java.time.Instant;
-
 public record CouponRequest(
         @NotBlank(message = "Coupon code is required")
         @Pattern(regexp = "^[A-Za-z0-9_-]{3,20}$", message = "Coupon code must be 3-20 alphanumeric characters")
@@ -30,9 +28,9 @@ public record CouponRequest(
 
         String restaurantId,
 
-        Instant startDate,
+        String startDate,
 
-        Instant expiryDate,
+        String expiryDate,
 
         Integer maxUsageCount,
 

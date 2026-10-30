@@ -11,6 +11,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URI;
 import java.util.List;
@@ -45,11 +46,36 @@ public class RestaurantController {
         return restaurantService.getById(id);
     }
 
+    @GetMapping("/search")
+    public food_delivery_api.dto.RestaurantSearchResponse search(
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String cuisine,
+            @RequestParam(required = false) Boolean open,
+            @RequestParam(required = false) Double minRating,
+            @RequestParam(required = false) Integer maxDeliveryTime,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "12") int size,
+            @RequestParam(defaultValue = "name") String sort) {
+        return restaurantService.search(query, cuisine, open, minRating, maxDeliveryTime, page, size, sort);
+    }
+
     @PutMapping("/{id}")
     public RestaurantResponse update(@PathVariable String id,
                                      @Valid @RequestBody RestaurantRequest request,
                                      @AuthenticationPrincipal AuthenticatedUser user) {
         return restaurantService.update(id, request, user);
+    }
+
+    @PostMapping(value = "/{id}/image", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
+    public RestaurantResponse uploadImage(@PathVariable String id, @RequestParam("file") MultipartFile file,
+                                          @AuthenticationPrincipal AuthenticatedUser user) {
+        return restaurantService.uploadImage(id, file, user);
+    }
+
+    @PutMapping("/{id}/hours")
+    public RestaurantResponse updateHours(@PathVariable String id, @RequestBody java.util.Map<String, String> hours,
+                                          @AuthenticationPrincipal AuthenticatedUser user) {
+        return restaurantService.updateHours(id, hours, user);
     }
 
     @DeleteMapping("/{id}")

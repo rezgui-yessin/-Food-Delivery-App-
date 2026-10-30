@@ -1,16 +1,20 @@
 import { Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { OrderService } from '../../core/services/order.service';
 import { ToastService } from '../../core/services/toast.service';
-import { Order, OrderStatus } from '../../core/models';
+import { DriverEarnings, DriverProfile, Order, OrderStatus } from '../../core/models';
+import { DriverService } from '../../core/services/driver.service';
 import { DashboardLayoutComponent } from '../../shared/components/dashboard-layout/dashboard-layout.component';
+import { LiveMapComponent, LiveMapMarker } from '../../shared/components/live-map/live-map.component';
 import { fadeAnimation } from '../../shared/animations/animations';
 
 @Component({
   selector: 'app-driver-portal',
   standalone: true,
-  imports: [CommonModule, DashboardLayoutComponent],
+  imports: [CommonModule, FormsModule, DashboardLayoutComponent, LiveMapComponent],
   animations: [fadeAnimation],
   template: `
     <app-dashboard-layout>
@@ -25,6 +29,18 @@ import { fadeAnimation } from '../../shared/animations/animations';
               <h1 class="text-xl font-extrabold text-slate-800 dark:text-white">Courier Operations Portal</h1>
               <p class="text-slate-500 dark:text-slate-400 text-xs">Pickups, ongoing runs, delivery history, and earnings</p>
             </div>
+          </div>
+
+          <div class="flex flex-wrap items-center gap-3">
+            @if (profile(); as driver) {
+              <span class="text-sm font-semibold" [class.text-emerald-600]="driver.available" [class.text-slate-500]="!driver.available">
+                {{ driver.available ? 'Online' : 'Offline' }}
+              </span>
+              <button (click)="setAvailability(!driver.available)" class="px-4 py-2 rounded-xl text-sm font-bold text-white" [class.bg-emerald-600]="!driver.available" [class.bg-slate-600]="driver.available">
+                {{ driver.available ? 'Go offline' : 'Go online' }}
+              </button>
+              <button (click)="shareLocation()" class="px-4 py-2 rounded-xl border border-slate-200 text-sm font-semibold">Share location</button>
+            }
           </div>
 
           <button
@@ -90,6 +106,9 @@ import { fadeAnimation } from '../../shared/animations/animations';
               \${{ totalEarnings().toFixed(2) }}
             </span>
           </button>
+          <button (click)="activeTab.set('profile')" class="pb-3 px-4 text-sm font-bold border-b-2 whitespace-nowrap"
+            [class.border-emerald-500]="activeTab() === 'profile'" [class.text-emerald-600]="activeTab() === 'profile'"
+            [class.border-transparent]="activeTab() !== 'profile'" [class.text-slate-500]="activeTab() !== 'profile'">👤 Driver profile</button>
         </div>
 
         <!-- Tab 1: Available Pickups -->
@@ -125,6 +144,14 @@ import { fadeAnimation } from '../../shared/animations/animations';
                     </div>
                   </div>
 
+                  <iframe
+                    [src]="getMapEmbedUrl(order.deliveryAddress)"
+                    title="Delivery destination map"
+                    class="w-full h-52 rounded-xl border border-slate-200 dark:border-slate-700 mb-5"
+                    loading="lazy"
+                    referrerpolicy="no-referrer-when-downgrade">
+                  </iframe>
+
                   <div class="flex items-start gap-2.5">
                     <span class="text-emerald-500 text-base">📍</span>
                     <div>
@@ -144,6 +171,14 @@ import { fadeAnimation } from '../../shared/animations/animations';
                     <path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5 21 12m0 0-7.5 7.5M21 12H3" />
                   </svg>
                 </button>
+                <a
+                  [href]="getGoogleMapsUrl(order.deliveryAddress)"
+                  target="_blank"
+                  rel="noopener"
+                  class="mt-2 inline-flex w-full sm:w-auto items-center justify-center gap-2 px-5 py-2.5 border border-blue-200 text-blue-700 font-semibold rounded-xl hover:bg-blue-50">
+                  Open delivery map
+                </a>
+                <button (click)="rejectJob(order.id)" class="mt-2 w-full sm:w-auto px-5 py-2.5 border border-slate-300 text-slate-600 font-semibold rounded-xl">Reject</button>
               </div>
             } @empty {
               <div class="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-8">
@@ -194,9 +229,14 @@ import { fadeAnimation } from '../../shared/animations/animations';
                     <p class="font-bold text-slate-800 dark:text-white text-base">{{ order.deliveryAddress }}</p>
                   </div>
 
+                  <app-live-map
+                    [markers]="getLiveMapMarkers(order)"
+                    aria-label="Live driver and delivery route map">
+                  </app-live-map>
+
                   <div class="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800">
                     <span class="text-xs text-slate-400 uppercase font-semibold block mb-1">Recipient Phone</span>
-                    <p class="font-bold text-slate-800 dark:text-white text-base">{{ order.customerPhone }}</p>
+                    <a [href]="'tel:' + order.customerPhone" class="font-bold text-blue-600 text-base">{{ order.customerPhone }} · Contact customer</a>
                   </div>
                 </div>
 
@@ -215,11 +255,13 @@ import { fadeAnimation } from '../../shared/animations/animations';
                       <span>🛵 Out for Delivery to Customer</span>
                     </button>
                   } @else if (order.status === OrderStatus.OUT_FOR_DELIVERY) {
-                    <button
-                      (click)="updateStatus(order.id, OrderStatus.DELIVERED)"
-                      class="flex-1 py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow-lg shadow-emerald-600/30 transition-colors text-lg flex items-center justify-center gap-2">
-                      <span>🎉 Confirm Delivered to Customer</span>
-                    </button>
+                    <div class="flex-1 space-y-2">
+                      <input [(ngModel)]="proofCode" placeholder="Verification code (optional)" class="w-full px-3 py-2 rounded-lg border border-slate-200">
+                      <input [(ngModel)]="proofPhotoUrl" placeholder="Proof photo URL (optional)" class="w-full px-3 py-2 rounded-lg border border-slate-200">
+                      <button (click)="submitProofAndDeliver(order)" class="w-full py-4 bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold rounded-xl shadow-lg">
+                        🎉 Submit proof & confirm delivery
+                      </button>
+                    </div>
                   }
                 </div>
               </div>
@@ -290,6 +332,21 @@ import { fadeAnimation } from '../../shared/animations/animations';
             </div>
           </div>
         }
+
+        @if (activeTab() === 'profile') {
+          <div class="max-w-2xl bg-white dark:bg-slate-800 rounded-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-4">
+            <h2 class="text-xl font-bold">Driver and vehicle profile</h2>
+            <div class="grid sm:grid-cols-2 gap-4">
+              <input [(ngModel)]="profileDraft.fullName" placeholder="Full name" class="px-3 py-2 rounded-lg border border-slate-200">
+              <input [(ngModel)]="profileDraft.phone" placeholder="Phone" class="px-3 py-2 rounded-lg border border-slate-200">
+              <input [(ngModel)]="profileDraft.vehicleType" placeholder="Vehicle type" class="px-3 py-2 rounded-lg border border-slate-200">
+              <input [(ngModel)]="profileDraft.vehiclePlate" placeholder="Vehicle plate" class="px-3 py-2 rounded-lg border border-slate-200">
+              <input [(ngModel)]="profileDraft.deliveryZone" placeholder="Delivery zone" class="px-3 py-2 rounded-lg border border-slate-200">
+            </div>
+            <p class="text-sm text-slate-500">Rating: {{ profile()?.rating?.toFixed(1) || '0.0' }} / 5</p>
+            <button (click)="saveProfile()" class="px-5 py-3 bg-emerald-600 text-white rounded-xl font-bold">Save profile</button>
+          </div>
+        }
       </div>
     </app-dashboard-layout>
   `
@@ -297,11 +354,30 @@ import { fadeAnimation } from '../../shared/animations/animations';
 export class DriverPortalComponent implements OnInit {
   private readonly orderService = inject(OrderService);
   private readonly toastService = inject(ToastService);
+  private readonly driverService = inject(DriverService);
   private readonly route = inject(ActivatedRoute);
+  private readonly sanitizer = inject(DomSanitizer);
 
-  readonly activeTab = signal<'available' | 'active' | 'history' | 'earnings'>('available');
+  readonly activeTab = signal<'available' | 'active' | 'history' | 'earnings' | 'profile'>('available');
   readonly availableOrders = signal<Order[]>([]);
   readonly myDeliveries = signal<Order[]>([]);
+  readonly profile = signal<DriverProfile | null>(null);
+
+  getLiveMapMarkers(order: Order): LiveMapMarker[] {
+    const driver = this.profile();
+    return [
+      { label: 'Driver', latitude: driver?.latitude, longitude: driver?.longitude },
+      { label: 'Restaurant', latitude: order.restaurantLatitude, longitude: order.restaurantLongitude },
+      { label: 'Customer', latitude: order.deliveryLatitude, longitude: order.deliveryLongitude }
+    ];
+  }
+  readonly earnings = signal<DriverEarnings | null>(null);
+  proofCode = '';
+  proofPhotoUrl = '';
+  profileDraft: Partial<DriverProfile> = {};
+  private locationWatchId: number | null = null;
+  private lastLocationSentAt = 0;
+  private refreshTimer: ReturnType<typeof setInterval> | null = null;
 
   readonly ongoingDeliveries = computed(() =>
     this.myDeliveries().filter(o => o.status !== OrderStatus.DELIVERED && o.status !== OrderStatus.CANCELLED)
@@ -312,7 +388,7 @@ export class DriverPortalComponent implements OnInit {
   );
 
   readonly totalEarnings = computed(() =>
-    this.completedDeliveries().length * 5.50
+    this.earnings()?.totalEarnings ?? this.completedDeliveries().length * 5.50
   );
 
   readonly OrderStatus = OrderStatus;
@@ -326,14 +402,74 @@ export class DriverPortalComponent implements OnInit {
       if (p['tab'] === 'active') this.activeTab.set('active');
       else if (p['tab'] === 'history') this.activeTab.set('history');
       else if (p['tab'] === 'earnings') this.activeTab.set('earnings');
+      else if (p['tab'] === 'profile') this.activeTab.set('profile');
       else if (p['tab'] === 'available') this.activeTab.set('available');
     });
     this.refresh();
+    this.driverService.getProfile().subscribe({ next: profile => { this.profile.set(profile); this.profileDraft = { ...profile }; } });
+    this.driverService.getEarnings().subscribe({ next: earnings => this.earnings.set(earnings) });
+    this.refreshTimer = setInterval(() => this.loadAvailable(), 15000);
   }
 
   refresh(): void {
     this.loadAvailable();
     this.loadMyDeliveries();
+    this.driverService.getEarnings().subscribe({ next: earnings => this.earnings.set(earnings) });
+  }
+
+  setAvailability(available: boolean): void {
+    this.driverService.setAvailability(available).subscribe({
+      next: profile => {
+        this.profile.set(profile);
+        if (available) this.startLocationSharing();
+        else this.stopLocationSharing();
+      },
+      error: error => this.toastService.error('Availability failed', error?.error?.message || 'Could not update availability.')
+    });
+  }
+
+  shareLocation(): void {
+    this.startLocationSharing();
+  }
+
+  private startLocationSharing(): void {
+    if (!navigator.geolocation) {
+      this.toastService.error('Location unavailable', 'This browser does not support GPS location.');
+      return;
+    }
+    if (this.locationWatchId !== null) return;
+    this.locationWatchId = navigator.geolocation.watchPosition(position => {
+      const now = Date.now();
+      if (now - this.lastLocationSentAt < 10000) return;
+      this.lastLocationSentAt = now;
+      this.driverService.updateLocation(position.coords.latitude, position.coords.longitude).subscribe({
+        next: profile => this.profile.set(profile),
+        error: error => this.toastService.error('Location failed', error?.error?.message || 'Could not share your location.')
+      });
+    }, () => this.toastService.error('Location denied', 'Allow location access to share your position.'), {
+      enableHighAccuracy: true,
+      maximumAge: 10000,
+      timeout: 15000
+    });
+    this.toastService.success('Live location enabled', 'Your position will update while you are online.');
+  }
+
+  private stopLocationSharing(): void {
+    if (this.locationWatchId !== null) {
+      navigator.geolocation.clearWatch(this.locationWatchId);
+      this.locationWatchId = null;
+    }
+  }
+
+  submitProofAndDeliver(order: Order): void {
+    this.driverService.submitProof(order.id, { verificationCode: this.proofCode, photoUrl: this.proofPhotoUrl }).subscribe({
+      next: () => {
+        this.proofCode = '';
+        this.proofPhotoUrl = '';
+        this.updateStatus(order.id, OrderStatus.DELIVERED);
+      },
+      error: error => this.toastService.error('Proof failed', error?.error?.message || 'Submit delivery proof before completing the order.')
+    });
   }
 
   loadAvailable(): void {
@@ -360,6 +496,20 @@ export class DriverPortalComponent implements OnInit {
     });
   }
 
+  rejectJob(orderId: string): void {
+    this.orderService.rejectOrder(orderId).subscribe({
+      next: () => { this.availableOrders.update(list => list.filter(order => order.id !== orderId)); this.toastService.info('Job skipped', 'The delivery remains available for another driver.'); },
+      error: error => this.toastService.error('Unable to reject', error?.error?.message || 'This delivery is no longer available.')
+    });
+  }
+
+  saveProfile(): void {
+    this.driverService.updateProfile(this.profileDraft).subscribe({
+      next: profile => { this.profile.set(profile); this.profileDraft = { ...profile }; this.toastService.success('Profile saved', 'Driver and vehicle details updated.'); },
+      error: error => this.toastService.error('Profile failed', error?.error?.message || 'Could not save your profile.')
+    });
+  }
+
   updateStatus(orderId: string, status: OrderStatus): void {
     this.orderService.updateStatus(orderId, status).subscribe({
       next: (updated) => {
@@ -377,5 +527,17 @@ export class DriverPortalComponent implements OnInit {
 
   getGoogleMapsUrl(address: string): string {
     return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(address)}`;
+  }
+
+  getMapEmbedUrl(address: string): SafeResourceUrl {
+    const query = encodeURIComponent(address || 'Food delivery destination');
+    return this.sanitizer.bypassSecurityTrustResourceUrl(
+      `https://www.google.com/maps?q=${query}&output=embed`
+    );
+  }
+
+  ngOnDestroy(): void {
+    this.stopLocationSharing();
+    if (this.refreshTimer) clearInterval(this.refreshTimer);
   }
 }

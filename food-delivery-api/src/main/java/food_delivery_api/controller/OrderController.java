@@ -49,6 +49,13 @@ public class OrderController {
         return orderService.acceptOrder(id, user);
     }
 
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<Void> rejectOrder(@PathVariable String id,
+                                             @AuthenticationPrincipal AuthenticatedUser user) {
+        orderService.rejectOrder(id, user);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping(value = "/{id}/tracking", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter trackOrder(@PathVariable String id,
                                  @AuthenticationPrincipal AuthenticatedUser user) {
@@ -59,6 +66,11 @@ public class OrderController {
     public OrderResponse getById(@PathVariable String id,
                                  @AuthenticationPrincipal AuthenticatedUser user) {
         return orderService.getById(id, user);
+    }
+
+    @PostMapping("/{id}/reorder")
+    public OrderResponse reorder(@PathVariable String id, @AuthenticationPrincipal AuthenticatedUser user) {
+        return orderService.reorder(id, user);
     }
 
     @GetMapping

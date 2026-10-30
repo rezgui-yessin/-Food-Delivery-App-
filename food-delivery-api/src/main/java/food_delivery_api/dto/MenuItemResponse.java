@@ -12,7 +12,10 @@ public record MenuItemResponse(
         BigDecimal price,
         String category,
         boolean available,
-        String imageUrl
+        String imageUrl,
+        int stockQuantity,
+        int preparationTimeMinutes,
+        int sortOrder
 ) {
     public static MenuItemResponse from(MenuItem m) {
         return new MenuItemResponse(
@@ -23,6 +26,9 @@ public record MenuItemResponse(
                 m.getPrice(),
                 m.getCategory(),
                 m.isAvailable(),
-                m.getImageUrl() );
+                m.getImageUrl(),
+                m.getStockQuantity(),
+                m.getPreparationTimeMinutes(),
+                m.getSortOrder() );
 }
 }

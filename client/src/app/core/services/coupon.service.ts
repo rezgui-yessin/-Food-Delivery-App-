@@ -38,5 +38,8 @@ export class CouponService {
   update(id: string, coupon: CouponRequest): Observable<Coupon> {
     return this.http.put<Coupon>(`${this.baseUrl}/${id}`, coupon);
   }
-}
 
+  delete(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/${id}`);
+  }
+}

@@ -20,6 +20,8 @@ import org.springframework.stereotype.Service;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -39,7 +41,9 @@ public class CouponService {
         }
 
         validateDiscount(request.discountType(), request.discountValue());
-        validateDates(request.startDate(), request.expiryDate());
+        Instant startDate = parseDate(request.startDate(), false);
+        Instant expiryDate = parseDate(request.expiryDate(), true);
+        validateDates(startDate, expiryDate);
 
         Instant now = Instant.now();
         Coupon coupon = Coupon.builder()
@@ -50,8 +54,8 @@ public class CouponService {
                 .minOrderAmount(request.minOrderAmount() != null ? request.minOrderAmount() : BigDecimal.ZERO)
                 .maxDiscountAmount(request.maxDiscountAmount())
                 .restaurantId(request.restaurantId())
-                .startDate(request.startDate() != null ? request.startDate() : now)
-                .expiryDate(request.expiryDate())
+                .startDate(startDate != null ? startDate : now)
+                .expiryDate(expiryDate)
                 .maxUsageCount(request.maxUsageCount())
                 .usageCount(0)
                 .active(request.active() != null ? request.active() : true)
@@ -114,7 +118,9 @@ public class CouponService {
         }
 
         validateDiscount(request.discountType(), request.discountValue());
-        validateDates(request.startDate(), request.expiryDate());
+        Instant startDate = parseDate(request.startDate(), false);
+        Instant expiryDate = parseDate(request.expiryDate(), true);
+        validateDates(startDate, expiryDate);
 
         coupon.setCode(normalizedCode);
         coupon.setDescription(request.description());
@@ -123,10 +129,10 @@ public class CouponService {
         coupon.setMinOrderAmount(request.minOrderAmount() != null ? request.minOrderAmount() : BigDecimal.ZERO);
         coupon.setMaxDiscountAmount(request.maxDiscountAmount());
         coupon.setRestaurantId(request.restaurantId());
-        if (request.startDate() != null) {
-            coupon.setStartDate(request.startDate());
+        if (startDate != null) {
+            coupon.setStartDate(startDate);
         }
-        coupon.setExpiryDate(request.expiryDate());
+        coupon.setExpiryDate(expiryDate);
         coupon.setMaxUsageCount(request.maxUsageCount());
         if (request.active() != null) {
             coupon.setActive(request.active());
@@ -272,6 +278,21 @@ public class CouponService {
     private void validateDates(Instant start, Instant expiry) {
         if (start != null && expiry != null && expiry.isBefore(start)) {
             throw new BadRequestException("Coupon expiry date cannot be before start date");
+        }
+    }
+
+    private Instant parseDate(String value, boolean endOfDay) {
+        if (value == null || value.isBlank()) return null;
+        try {
+            return Instant.parse(value);
+        } catch (java.time.format.DateTimeParseException ignored) {
+            try {
+                LocalDate date = LocalDate.parse(value);
+                return (endOfDay ? date.plusDays(1).atStartOfDay() : date.atStartOfDay())
+                        .toInstant(ZoneOffset.UTC);
+            } catch (java.time.format.DateTimeParseException ex) {
+                throw new BadRequestException("Invalid coupon date. Use YYYY-MM-DD or an ISO timestamp");
+            }
         }
     }
 

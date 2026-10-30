@@ -1,26 +1,28 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnDestroy, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule, NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { ActivatedRoute } from '@angular/router';
 import { OrderService } from '../../core/services/order.service';
 import { MenuService } from '../../core/services/menu.service';
 import { RestaurantService } from '../../core/services/restaurant.service';
+import { CouponService } from '../../core/services/coupon.service';
 import { AuthService } from '../../core/services/auth.service';
 import { ToastService } from '../../core/services/toast.service';
-import { MenuItem, Order, OrderStatus, Restaurant } from '../../core/models';
+import { Category, Coupon, MenuItem, Order, OrderStatus, Restaurant, RestaurantRequest, RestaurantAnalytics } from '../../core/models';
 import { ModalComponent } from '../../shared/components/modal/modal.component';
 import { DashboardLayoutComponent } from '../../shared/components/dashboard-layout/dashboard-layout.component';
+import { SimpleChartComponent } from '../../shared/components/simple-chart/simple-chart.component';
 import { getDishImage, PRESET_DISH_IMAGES } from '../../core/utils/asset-helpers';
 import { fadeAnimation } from '../../shared/animations/animations';
 
 @Component({
   selector: 'app-restaurant-dashboard',
   standalone: true,
-  imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent, DashboardLayoutComponent],
+  imports: [CommonModule, FormsModule, ReactiveFormsModule, ModalComponent, DashboardLayoutComponent, SimpleChartComponent],
   animations: [fadeAnimation],
   template: `
     <app-dashboard-layout>
-      <div @fadeAnimation class="p-6 max-w-7xl mx-auto space-y-6">
+      <div @fadeAnimation [class.kitchen-mode]="kitchenMode()" class="p-6 max-w-7xl mx-auto space-y-6">
         <!-- Dashboard Top Action Bar -->
         <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm">
           <div class="flex items-center gap-3">
@@ -56,15 +58,18 @@ import { fadeAnimation } from '../../shared/animations/animations';
               </svg>
               Refresh
             </button>
+            <button (click)="kitchenMode.set(!kitchenMode())" class="px-4 py-2 rounded-xl bg-slate-900 text-white text-sm font-semibold">
+              {{ kitchenMode() ? 'Exit kitchen mode' : 'Kitchen mode' }}
+            </button>
           </div>
         </div>
 
         <!-- Dashboard Navigation Tabs -->
-        <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1">
+        <div class="flex items-center gap-2 border-b border-slate-200 dark:border-slate-800 pb-1 overflow-x-auto text-sm font-bold">
           <button
             (click)="activeTab.set('orders')"
-            class="pb-3 px-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2"
-            [class]="activeTab() === 'orders' ? 'border-primary text-primary' : 'border-transparent text-slate-500 dark:text-slate-400'">
+            class="pb-3 px-4 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap"
+            [class]="activeTab() === 'orders' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'">
             <span>🍳 Kitchen Orders</span>
             <span class="px-2 py-0.5 text-xs rounded-full bg-primary/10 text-primary">
               {{ activeOrdersCount() }}
@@ -73,12 +78,46 @@ import { fadeAnimation } from '../../shared/animations/animations';
 
           <button
             (click)="activeTab.set('menu')"
-            class="pb-3 px-4 text-sm font-bold border-b-2 transition-all flex items-center gap-2"
-            [class]="activeTab() === 'menu' ? 'border-primary text-primary' : 'border-transparent text-slate-500 dark:text-slate-400'">
-            <span>📋 Menu Management</span>
+            class="pb-3 px-4 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap"
+            [class]="activeTab() === 'menu' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'">
+            <span>📋 Menu Catalog</span>
             <span class="px-2 py-0.5 text-xs rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
               {{ menuItems().length }}
             </span>
+          </button>
+
+          <button
+            (click)="activeTab.set('categories')"
+            class="pb-3 px-4 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap"
+            [class]="activeTab() === 'categories' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'">
+            <span>🏷️ Categories</span>
+            <span class="px-2 py-0.5 text-xs rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              {{ categories().length }}
+            </span>
+          </button>
+
+          <button
+            (click)="activeTab.set('coupons')"
+            class="pb-3 px-4 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap"
+            [class]="activeTab() === 'coupons' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'">
+            <span>🎟️ Coupons</span>
+            <span class="px-2 py-0.5 text-xs rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300">
+              {{ coupons().length }}
+            </span>
+          </button>
+
+          <button
+            (click)="activeTab.set('analytics')"
+            class="pb-3 px-4 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap"
+            [class]="activeTab() === 'analytics' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'">
+            <span>📈 Analytics</span>
+          </button>
+
+          <button
+            (click)="activeTab.set('settings')"
+            class="pb-3 px-4 border-b-2 transition-all flex items-center gap-2 whitespace-nowrap"
+            [class]="activeTab() === 'settings' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white'">
+            <span>⚙️ Settings</span>
           </button>
         </div>
 
@@ -137,6 +176,7 @@ import { fadeAnimation } from '../../shared/animations/animations';
                         class="px-3 py-2 text-xs font-semibold bg-red-100 hover:bg-red-200 text-red-700 dark:bg-red-950/40 dark:text-red-300 rounded-lg transition-colors">
                         Decline
                       </button>
+                      <button (click)="printReceipt(order)" class="px-3 py-2 text-xs font-semibold border border-slate-200 rounded-lg">Print</button>
                     </div>
                   </div>
                 } @empty {
@@ -247,6 +287,21 @@ import { fadeAnimation } from '../../shared/animations/animations';
         <!-- Tab 2: Menu Management -->
         @if (activeTab() === 'menu') {
           <div class="space-y-6">
+            <div class="dash-card p-5">
+              <div class="flex items-center justify-between mb-3">
+                <div><h3 class="font-bold">Categories</h3><p class="text-xs text-slate-500">Organize your menu into reusable categories.</p></div>
+                <button (click)="addCategory()" class="px-3 py-2 bg-primary text-white rounded-xl text-xs font-semibold">Add category</button>
+              </div>
+              <div class="flex flex-wrap gap-2">
+                @for (category of categories(); track category.id) {
+                  <span class="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-sm">
+                    {{ category.name }}
+                    <button (click)="editCategory(category)" class="ml-1 text-primary" aria-label="Edit category">Edit</button>
+                    <button (click)="deleteCategory(category.id)" class="ml-1 text-red-500" aria-label="Delete category">×</button>
+                  </span>
+                } @empty { <span class="text-sm text-slate-500">No categories created yet.</span> }
+              </div>
+            </div>
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-xl font-bold text-slate-800 dark:text-white">Dish Catalog</h3>
@@ -270,6 +325,7 @@ import { fadeAnimation } from '../../shared/animations/animations';
                       <th class="py-3 px-4">Category</th>
                       <th class="py-3 px-4">Price ($)</th>
                       <th class="py-3 px-4">Availability</th>
+                      <th class="py-3 px-4">Stock / Prep</th>
                       <th class="py-3 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -287,10 +343,16 @@ import { fadeAnimation } from '../../shared/animations/animations';
                             </div>
                           </div>
                         </td>
-                        <td class="py-3 px-4 font-medium">
+                        <td class="py-3 px-4 text-xs text-slate-500">
                           <span class="px-2.5 py-1 text-xs rounded-full bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
                             {{ dish.category }}
                           </span>
+                        </td>
+                        <td class="py-3 px-4">
+                          <div class="flex items-center gap-2">
+                            <input type="number" min="0" [value]="dish.stockQuantity ?? 0" (change)="updateInventory(dish, $event, 'stockQuantity')" class="w-16 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900">
+                            <input type="number" min="1" [value]="dish.preparationTimeMinutes ?? 20" (change)="updateInventory(dish, $event, 'preparationTimeMinutes')" class="w-16 px-2 py-1 rounded-lg border border-slate-200 dark:border-slate-600 bg-white dark:bg-slate-900">
+                          </div>
                         </td>
                         <td class="py-3 px-4">
                           <div class="flex items-center gap-1">
@@ -323,7 +385,7 @@ import { fadeAnimation } from '../../shared/animations/animations';
                       </tr>
                     } @empty {
                       <tr>
-                        <td colspan="5" class="py-8 text-center text-slate-400 text-sm">
+                        <td colspan="6" class="py-8 text-center text-slate-400 text-sm">
                           No menu items found. Click "+ Add New Dish" above.
                         </td>
                       </tr>
@@ -332,6 +394,154 @@ import { fadeAnimation } from '../../shared/animations/animations';
                 </table>
               </div>
             </div>
+          </div>
+        }
+
+        @if (activeTab() === 'categories') {
+          <div class="dash-card overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 class="text-xl font-bold">Category Catalog</h3>
+                <p class="text-sm text-slate-500">Group your dishes into customer-facing menu sections.</p>
+              </div>
+              <button
+                (click)="addCategory()"
+                class="px-4 py-2 bg-primary hover:bg-primary-hover text-white text-xs font-bold rounded-xl shadow-sm transition-colors">
+                + Add Category
+              </button>
+            </div>
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-sm">
+                <thead class="bg-slate-50 dark:bg-slate-800/60 uppercase font-semibold text-slate-400 text-xs border-b border-slate-100 dark:border-slate-800">
+                  <tr>
+                    <th class="py-3 px-5">Name</th>
+                    <th class="py-3 px-5">Description</th>
+                    <th class="py-3 px-5">Sort Order</th>
+                    <th class="py-3 px-5">Status</th>
+                    <th class="py-3 px-5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+                  @for (cat of categories(); track cat.id) {
+                    <tr class="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors">
+                      <td class="py-3.5 px-5 font-bold text-slate-800 dark:text-white">{{ cat.name }}</td>
+                      <td class="py-3.5 px-5 text-slate-500 text-xs">{{ cat.description || '—' }}</td>
+                      <td class="py-3.5 px-5 text-slate-500 text-xs">{{ cat.sortOrder }}</td>
+                      <td class="py-3.5 px-5">
+                        <span class="px-2 py-0.5 rounded-full text-xs font-bold" [class]="cat.active ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300' : 'bg-slate-100 text-slate-600'">
+                          {{ cat.active ? 'Active' : 'Hidden' }}
+                        </span>
+                      </td>
+                      <td class="py-3.5 px-5 text-right space-x-2">
+                        <button (click)="editCategory(cat)" class="text-xs font-semibold text-primary hover:underline">Edit</button>
+                        <button (click)="deleteCategory(cat.id)" class="text-xs font-semibold text-red-500 hover:text-red-700">Delete</button>
+                      </td>
+                    </tr>
+                  } @empty {
+                    <tr><td colspan="5" class="p-8 text-center text-slate-400 text-sm">No categories yet. Click "+ Add Category" to create one.</td></tr>
+                  }
+                </tbody>
+              </table>
+            </div>
+          </div>
+        }
+
+        @if (activeTab() === 'coupons') {
+          <div class="dash-card overflow-hidden">
+            <div class="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+              <div>
+                <h3 class="text-xl font-bold">Restaurant Coupons & Promotions</h3>
+                <p class="text-sm text-slate-500">Promotions currently valid for this restaurant.</p>
+              </div>
+              <button (click)="loadCoupons()" class="text-xs font-semibold text-primary">Refresh</button>
+            </div>
+            <div class="divide-y divide-slate-100 dark:divide-slate-800">
+              @for (coupon of coupons(); track coupon.id) {
+                <div class="px-5 py-4 flex items-center justify-between gap-4">
+                  <div class="flex items-center gap-3">
+                    <span class="font-mono font-bold text-sm px-2.5 py-1 rounded-lg bg-primary/10 text-primary">{{ coupon.code }}</span>
+                    <div>
+                      <p class="font-semibold text-sm">{{ coupon.discountValue }}{{ coupon.discountType === 'PERCENTAGE' ? '%' : '$' }} off (Min: \${{ coupon.minOrderAmount }})</p>
+                      <p class="text-xs text-slate-400">{{ coupon.description || 'Active promotion' }}</p>
+                    </div>
+                  </div>
+                  <button (click)="removeCoupon(coupon)" class="text-xs text-red-600 font-semibold px-3 py-1.5 rounded-lg hover:bg-red-50">Delete</button>
+                </div>
+              } @empty {
+                <p class="p-8 text-center text-sm text-slate-400">No coupons configured for this restaurant.</p>
+              }
+            </div>
+          </div>
+        }
+
+        @if (activeTab() === 'analytics') {
+          <div class="space-y-6">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div class="dash-card p-5"><p class="kpi-label">Daily revenue</p><p class="kpi-value text-2xl font-bold">\${{ analytics()?.dailyRevenue?.toFixed(2) || '0.00' }}</p></div>
+              <div class="dash-card p-5"><p class="kpi-label">Weekly orders</p><p class="kpi-value text-2xl font-bold">{{ analytics()?.weeklyOrders || 0 }}</p></div>
+              <div class="dash-card p-5"><p class="kpi-label">Average order</p><p class="kpi-value text-2xl font-bold">\${{ analytics()?.averageOrderValue?.toFixed(2) || '0.00' }}</p></div>
+              <div class="dash-card p-5"><p class="kpi-label">Delivered</p><p class="kpi-value text-2xl font-bold">{{ deliveredOrders() }}</p></div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="dash-card p-5 space-y-4">
+                <h3 class="font-bold text-slate-800 dark:text-white">Top Dish Sales by Volume</h3>
+                @if (popularProductsChartLabels().length > 0) {
+                  <app-simple-chart
+                    [labels]="popularProductsChartLabels()"
+                    [values]="popularProductsChartValues()"
+                    label="Units Sold" />
+                } @else {
+                  <p class="text-sm text-slate-400 py-12 text-center">Charts will populate as completed orders accumulate.</p>
+                }
+              </div>
+
+              <div class="dash-card p-5">
+                <h3 class="font-bold mb-4">Popular Dish Breakdown</h3>
+                <div class="divide-y divide-slate-100 dark:divide-slate-800">
+                  @for (product of analytics()?.popularProducts || []; track product.name) {
+                    <div class="flex items-center justify-between text-sm py-3">
+                      <div>
+                        <p class="font-semibold text-slate-800 dark:text-white">{{ product.name }}</p>
+                        <p class="text-xs text-slate-400">\${{ (product.revenue || 0).toFixed(2) }} total revenue</p>
+                      </div>
+                      <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary">{{ product.quantity }} sold</span>
+                    </div>
+                  } @empty {
+                    <p class="text-sm text-slate-500 py-6 text-center">Analytics will appear after orders are completed.</p>
+                  }
+                </div>
+              </div>
+            </div>
+          </div>
+        }
+
+        @if (activeTab() === 'settings') {
+          <div class="dash-card max-w-2xl p-6">
+            <h3 class="text-xl font-bold mb-1">Restaurant settings</h3>
+            <p class="text-sm text-slate-500 mb-6">Update the restaurant profile through the backend API.</p>
+            <form [formGroup]="restaurantForm" (ngSubmit)="saveRestaurant()" class="space-y-4">
+              <div class="flex items-center gap-4">
+                <img [src]="selectedRestaurant()?.imageUrl || '/assets/icons/favicon.svg'" alt="Restaurant logo" class="w-16 h-16 rounded-2xl object-cover border border-slate-200">
+                <label class="px-3 py-2 rounded-xl border border-slate-200 text-sm font-semibold cursor-pointer">Upload logo
+                  <input type="file" accept="image/png,image/jpeg,image/webp" class="hidden" (change)="uploadRestaurantImage($event)">
+                </label>
+              </div>
+              <input formControlName="name" placeholder="Restaurant name" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent">
+              <textarea formControlName="description" rows="3" placeholder="Description" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent"></textarea>
+              <input formControlName="address" placeholder="Address" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent">
+              <div class="grid grid-cols-2 gap-3">
+                <input formControlName="phone" placeholder="Phone" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent">
+                <input formControlName="cuisineType" placeholder="Cuisine type" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent">
+              </div>
+              <label class="flex items-center gap-2 text-sm"><input type="checkbox" formControlName="open"> Accepting orders</label>
+              <div class="grid grid-cols-2 gap-3">
+                @for (day of weekDays; track day) {
+                  <label class="text-xs font-semibold capitalize">{{ day }}<input [ngModel]="hours()[day]" (ngModelChange)="setHour(day, $event)" [ngModelOptions]="{standalone: true}" class="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 bg-transparent" placeholder="09:00-22:00"></label>
+                }
+              </div>
+              <button type="submit" [disabled]="restaurantForm.invalid" class="px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-semibold disabled:opacity-50">Save changes</button>
+            </form>
           </div>
         }
       </div>
@@ -417,23 +627,40 @@ import { fadeAnimation } from '../../shared/animations/animations';
     </app-modal>
   `
 })
-export class RestaurantDashboardComponent implements OnInit {
+export class RestaurantDashboardComponent implements OnInit, OnDestroy {
   readonly getDishImage = getDishImage;
   readonly presetDishImages = PRESET_DISH_IMAGES;
   private readonly orderService = inject(OrderService);
   private readonly menuService = inject(MenuService);
   private readonly restaurantService = inject(RestaurantService);
+  private readonly couponService = inject(CouponService);
   private readonly authService = inject(AuthService);
   private readonly toastService = inject(ToastService);
   private readonly fb = inject(NonNullableFormBuilder);
   private readonly route = inject(ActivatedRoute);
 
-  readonly activeTab = signal<'orders' | 'menu'>('orders');
+  readonly activeTab = signal<'orders' | 'menu' | 'categories' | 'coupons' | 'analytics' | 'settings'>('orders');
+  readonly kitchenMode = signal(false);
   readonly myRestaurants = signal<Restaurant[]>([]);
   readonly selectedRestaurantId = signal<string>('');
   readonly orders = signal<Order[]>([]);
   readonly menuItems = signal<MenuItem[]>([]);
+  readonly coupons = signal<Coupon[]>([]);
+  readonly analytics = signal<RestaurantAnalytics | null>(null);
+  readonly categories = signal<Category[]>([]);
+  readonly hours = signal<Record<string, string>>({});
+  readonly selectedRestaurant = computed(() => this.myRestaurants().find(item => item.id === this.selectedRestaurantId()));
+  readonly weekDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
   readonly isAddModalOpen = signal<boolean>(false);
+  readonly revenue = computed(() => this.orders().reduce((sum, order) => sum + order.totalAmount, 0));
+  readonly deliveredOrders = computed(() => this.orders().filter(order => order.status === OrderStatus.DELIVERED).length);
+
+  readonly popularProductsChartLabels = computed(() =>
+    (this.analytics()?.popularProducts || []).map(p => p.name)
+  );
+  readonly popularProductsChartValues = computed(() =>
+    (this.analytics()?.popularProducts || []).map(p => p.quantity)
+  );
 
   readonly OrderStatus = OrderStatus;
 
@@ -456,6 +683,7 @@ export class RestaurantDashboardComponent implements OnInit {
 
   private previousOrderCount = 0;
   private audioContext: AudioContext | null = null;
+  private refreshTimer: ReturnType<typeof setInterval> | null = null;
 
   readonly dishForm = this.fb.group({
     name: ['', [Validators.required, Validators.minLength(2)]],
@@ -465,6 +693,14 @@ export class RestaurantDashboardComponent implements OnInit {
     imageUrl: ['https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=500&q=80', [Validators.required]],
     available: [true]
   });
+  readonly restaurantForm = this.fb.group({
+    name: ['', [Validators.required]],
+    description: [''],
+    address: ['', [Validators.required]],
+    phone: ['', [Validators.required]],
+    cuisineType: ['', [Validators.required]],
+    open: [true]
+  });
 
   ngOnInit(): void {
     this.route.params.subscribe(p => {
@@ -472,6 +708,14 @@ export class RestaurantDashboardComponent implements OnInit {
         this.activeTab.set('menu');
       } else if (p['tab'] === 'orders') {
         this.activeTab.set('orders');
+      } else if (p['tab'] === 'categories') {
+        this.activeTab.set('categories');
+      } else if (p['tab'] === 'analytics') {
+        this.activeTab.set('analytics');
+      } else if (p['tab'] === 'settings') {
+        this.activeTab.set('settings');
+      } else if (p['tab'] === 'coupons') {
+        this.activeTab.set('coupons');
       }
     });
 
@@ -480,13 +724,16 @@ export class RestaurantDashboardComponent implements OnInit {
         this.myRestaurants.set(restaurants);
         if (restaurants.length > 0) {
           this.selectedRestaurantId.set(restaurants[0].id);
+          this.restaurantForm.patchValue(restaurants[0]);
           this.loadOrders();
           this.loadMenu();
+          this.loadCoupons();
+          this.loadOwnerExtras();
         }
       }
     });
 
-    setInterval(() => {
+    this.refreshTimer = setInterval(() => {
       if (this.selectedRestaurantId()) {
         this.loadOrders(false);
       }
@@ -495,8 +742,25 @@ export class RestaurantDashboardComponent implements OnInit {
 
   onRestaurantChange(id: string): void {
     this.selectedRestaurantId.set(id);
+    const restaurant = this.myRestaurants().find(item => item.id === id);
+    if (restaurant) this.restaurantForm.patchValue(restaurant);
     this.loadOrders();
     this.loadMenu();
+    this.loadCoupons();
+    this.loadOwnerExtras();
+  }
+
+  saveRestaurant(): void {
+    const id = this.selectedRestaurantId();
+    if (!id || this.restaurantForm.invalid) return;
+    this.restaurantService.update(id, this.restaurantForm.getRawValue() as RestaurantRequest).subscribe({
+      next: updated => {
+        this.myRestaurants.update(list => list.map(item => item.id === updated.id ? updated : item));
+        this.toastService.success('Settings saved', 'Restaurant profile updated.');
+        this.restaurantService.updateHours(id, this.hours()).subscribe();
+      },
+      error: error => this.toastService.error('Save failed', error?.error?.message || 'Could not update restaurant profile.')
+    });
   }
 
   refreshData(): void {
@@ -527,6 +791,123 @@ export class RestaurantDashboardComponent implements OnInit {
 
     this.menuService.getByRestaurant(rId).subscribe({
       next: (items) => this.menuItems.set(items)
+    });
+  }
+
+  loadCoupons(): void {
+    const rId = this.selectedRestaurantId();
+    if (!rId) return;
+    this.couponService.getAll(rId).subscribe({
+      next: coupons => this.coupons.set(coupons)
+    });
+  }
+
+  loadOwnerExtras(): void {
+    const id = this.selectedRestaurantId();
+    if (!id) return;
+    this.restaurantService.getAnalytics(id).subscribe({ next: data => this.analytics.set(data) });
+    this.restaurantService.getCategories(id).subscribe({ next: data => this.categories.set(data) });
+    this.hours.set(this.selectedRestaurant()?.openingHours || {});
+  }
+
+  ngOnDestroy(): void {
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer);
+      this.refreshTimer = null;
+    }
+    if (this.audioContext) {
+      void this.audioContext.close();
+      this.audioContext = null;
+    }
+  }
+
+  setHour(day: string, value: string): void {
+    this.hours.update(current => ({ ...current, [day]: value }));
+  }
+
+  uploadRestaurantImage(event: Event): void {
+    const file = (event.target as HTMLInputElement).files?.[0];
+    const id = this.selectedRestaurantId();
+    if (!file || !id) return;
+    this.restaurantService.uploadImage(id, file).subscribe({
+      next: updated => {
+        this.myRestaurants.update(list => list.map(item => item.id === updated.id ? updated : item));
+        this.toastService.success('Logo updated', 'Restaurant branding has been updated.');
+      },
+      error: error => this.toastService.error('Upload failed', error?.error?.message || 'Could not upload the logo.')
+    });
+  }
+
+  addCategory(): void {
+    const name = window.prompt('Category name');
+    const id = this.selectedRestaurantId();
+    if (!name?.trim() || !id) return;
+    this.restaurantService.createCategory(id, { name: name.trim(), description: '', sortOrder: this.categories().length, active: true }).subscribe({
+      next: category => this.categories.update(items => [...items, category]),
+      error: error => this.toastService.error('Category failed', error?.error?.message || 'Could not create category.')
+    });
+  }
+
+  editCategory(category: Category): void {
+    const name = window.prompt('Category name', category.name);
+    const restaurantId = this.selectedRestaurantId();
+    if (!name?.trim() || !restaurantId) return;
+    this.restaurantService.updateCategory(restaurantId, category.id, {
+      name: name.trim(),
+      description: category.description || '',
+      sortOrder: category.sortOrder,
+      active: category.active
+    }).subscribe({
+      next: updated => this.categories.update(items => items.map(item => item.id === updated.id ? updated : item)),
+      error: error => this.toastService.error('Category failed', error?.error?.message || 'Could not update category.')
+    });
+  }
+
+  deleteCategory(id: string): void {
+    const restaurantId = this.selectedRestaurantId();
+    this.restaurantService.deleteCategory(restaurantId, id).subscribe({
+      next: () => this.categories.update(items => items.filter(item => item.id !== id)),
+      error: error => this.toastService.error('Category failed', error?.error?.message || 'Could not delete category.')
+    });
+  }
+
+  printReceipt(order: Order): void {
+    const lines = order.items.map(item => `${item.quantity}x ${item.name}`).join('\n');
+    const receipt = `FoodRush order #${order.id}\nCustomer: ${order.customerName}\nAddress: ${order.deliveryAddress}\n\n${lines}\n\nTotal: $${order.totalAmount.toFixed(2)}`;
+    const popup = window.open('', '_blank', 'width=420,height=600');
+    if (!popup) return;
+    popup.document.write(`<pre style="font:14px monospace;white-space:pre-wrap;padding:24px">${receipt.replace(/</g, '&lt;')}</pre>`);
+    popup.document.close();
+    popup.print();
+  }
+
+  updateInventory(dish: MenuItem, event: Event, field: 'stockQuantity' | 'preparationTimeMinutes'): void {
+    const restaurantId = this.selectedRestaurantId();
+    if (!restaurantId) return;
+    const value = Math.max(0, Number((event.target as HTMLInputElement).value) || 0);
+    const request = {
+      name: dish.name,
+      description: dish.description,
+      price: dish.price,
+      category: dish.category,
+      available: dish.available,
+      stockQuantity: field === 'stockQuantity' ? value : (dish.stockQuantity ?? 0),
+      preparationTimeMinutes: field === 'preparationTimeMinutes' ? Math.max(1, value) : (dish.preparationTimeMinutes ?? 20),
+      sortOrder: dish.sortOrder ?? 0
+    };
+    this.menuService.update(restaurantId, dish.id, request).subscribe({
+      next: updated => this.menuItems.update(items => items.map(item => item.id === updated.id ? updated : item)),
+      error: error => this.toastService.error('Inventory failed', error?.error?.message || 'Could not update inventory.')
+    });
+  }
+
+  removeCoupon(coupon: Coupon): void {
+    this.couponService.delete(coupon.id).subscribe({
+      next: () => {
+        this.coupons.update(list => list.filter(item => item.id !== coupon.id));
+        this.toastService.success('Coupon deleted', `${coupon.code} was removed.`);
+      },
+      error: error => this.toastService.error('Delete failed', error?.error?.message || 'Could not delete coupon.')
     });
   }
 
@@ -595,7 +976,8 @@ export class RestaurantDashboardComponent implements OnInit {
     if (!rId || this.dishForm.invalid) return;
 
     const val = this.dishForm.getRawValue();
-    this.menuService.create(rId, val).subscribe({
+    const { imageUrl: _imageUrl, ...request } = val;
+    this.menuService.create(rId, request).subscribe({
       next: (created) => {
         this.menuItems.update(items => [...items, created]);
         this.isAddModalOpen.set(false);
@@ -616,8 +998,10 @@ export class RestaurantDashboardComponent implements OnInit {
       description: dish.description,
       price: newPrice,
       category: dish.category,
-      imageUrl: dish.imageUrl,
-      available: dish.available
+      available: dish.available,
+      stockQuantity: dish.stockQuantity ?? 0,
+      preparationTimeMinutes: dish.preparationTimeMinutes ?? 20,
+      sortOrder: dish.sortOrder ?? 0
     }).subscribe({
       next: (updated) => {
         this.menuItems.update(list => list.map(d => d.id === updated.id ? updated : d));
@@ -635,8 +1019,10 @@ export class RestaurantDashboardComponent implements OnInit {
       description: dish.description,
       price: dish.price,
       category: dish.category,
-      imageUrl: dish.imageUrl,
-      available: newAvail
+      available: newAvail,
+      stockQuantity: dish.stockQuantity ?? 0,
+      preparationTimeMinutes: dish.preparationTimeMinutes ?? 20,
+      sortOrder: dish.sortOrder ?? 0
     }).subscribe({
       next: (updated) => {
         this.menuItems.update(list => list.map(d => d.id === updated.id ? updated : d));

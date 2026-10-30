@@ -3,9 +3,21 @@
 @tailwind utilities;
 
 @layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
   body {
     @apply bg-slate-50 text-slate-800 antialiased selection:bg-primary/20 selection:text-primary dark:bg-slate-900 dark:text-slate-100;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+  }
+
+  button, a, input, textarea, select {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary ring-offset-2 ring-offset-slate-50 dark:ring-offset-slate-950;
   }
 }
 
@@ -29,6 +41,68 @@
   @apply bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200/60 dark:border-slate-800/60;
 }
 
+.dash-card {
+  @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-slate-800 dark:bg-slate-900;
+  transition: box-shadow 220ms ease, border-color 220ms ease, transform 220ms ease;
+}
+
+.dash-card:hover {
+  @apply border-primary/20 shadow-md;
+}
+
+.dash-sidebar {
+  width: 17rem;
+  flex-shrink: 0;
+  transition: width 240ms cubic-bezier(0.16, 1, 0.3, 1), transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dash-sidebar.collapsed {
+  width: 4.5rem;
+}
+
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes softFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-rise-in {
+  animation: riseIn 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.animate-soft-float {
+  animation: softFloat 5s ease-in-out infinite;
+}
+
+.restaurant-card {
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1), box-shadow 240ms ease;
+}
+
+.restaurant-card:hover {
+  transform: translateY(-5px);
+}
+
+@media (max-width: 1023px) {
+  .dash-sidebar {
+    position: fixed;
+    inset: 0 auto 0 0;
+    transform: translateX(-100%);
+    box-shadow: 20px 0 45px rgba(15, 23, 42, 0.16);
+  }
+
+  .dash-sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .dash-sidebar.collapsed {
+    width: 17rem;
+  }
+}
+
 /* Pulse radar ring keyframes */
 @keyframes pulseRadar {
   0% {
@@ -47,4 +121,20 @@
 
 .radar-glow {
   animation: pulseRadar 2s infinite cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  .restaurant-card:hover,
+  .dash-card:hover {
+    transform: none;
+  }
 }

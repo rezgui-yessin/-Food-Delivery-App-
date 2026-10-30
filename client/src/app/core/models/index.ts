@@ -39,6 +39,122 @@ export interface User {
   email: string;
   fullName: string;
   role: Role;
+  phone?: string;
+  active?: boolean;
+  approved?: boolean;
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  role: Role;
+  active: boolean;
+  approved: boolean;
+  driverAvailable: boolean;
+  vehicleType?: string;
+  vehiclePlate?: string;
+  deliveryZone?: string;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface AdminUserCreateRequest {
+  email: string;
+  password: string;
+  fullName: string;
+  role: Role;
+  active?: boolean;
+  approved?: boolean;
+}
+
+export interface AdminReport {
+  users: number;
+  customers: number;
+  drivers: number;
+  restaurants: number;
+  orders: number;
+  grossRevenue: number;
+  commissionRevenue: number;
+}
+
+export interface AuditLog {
+  id: string;
+  actorId: string;
+  action: string;
+  targetType: string;
+  targetId: string;
+  details?: string;
+  createdAt: string;
+}
+
+export interface PlatformSettings {
+  commissionRate: number;
+  currency: string;
+}
+
+export interface DriverProfile {
+  id: string;
+  email: string;
+  fullName: string;
+  phone?: string;
+  vehicleType?: string;
+  vehiclePlate?: string;
+  available: boolean;
+  latitude?: number;
+  longitude?: number;
+  deliveryZone?: string;
+  rating?: number;
+}
+
+export interface DriverEarnings {
+  completedDeliveries: number;
+  totalEarnings: number;
+  averageEarnings: number;
+  currency: string;
+}
+
+export interface Address {
+  id: string;
+  label: string;
+  street: string;
+  city: string;
+  postalCode: string;
+  latitude?: number;
+  longitude?: number;
+  isDefault: boolean;
+}
+
+export interface AddressRequest {
+  label: string;
+  street: string;
+  city: string;
+  postalCode: string;
+  isDefault: boolean;
+  latitude?: number;
+  longitude?: number;
+}
+
+export interface Review {
+  id: string;
+  restaurantId: string;
+  customerId: string;
+  customerName: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Notification {
+  id: string;
+  title: string;
+  message: string;
+  type: string;
+  referenceId?: string;
+  read: boolean;
+  createdAt: string;
 }
 
 export interface AuthResponse {
@@ -49,27 +165,34 @@ export interface AuthResponse {
 
 export interface Restaurant {
   id: string;
+  ownerId?: string;
   name: string;
   description: string;
   address: string;
+  latitude?: number;
+  longitude?: number;
   phone: string;
   cuisineType: string;
   open: boolean;
-  ownerId?: string;
+  approved?: boolean;
+  imageUrl?: string;
   rating?: number;
   deliveryTimeMin?: number;
   minOrder?: number;
-  imageUrl?: string;
+  deliveryFee?: number;
+  openingHours?: Record<string, string>;
 }
 
 export interface RestaurantRequest {
   name: string;
   description: string;
   address: string;
+  latitude?: number;
+  longitude?: number;
   phone: string;
   cuisineType: string;
   open: boolean;
-  ownerId?: string;
+  openingHours?: Record<string, string>;
 }
 
 export interface MenuItem {
@@ -78,18 +201,46 @@ export interface MenuItem {
   name: string;
   description: string;
   price: number;
-  imageUrl?: string;
   category: string;
   available: boolean;
+  imageUrl?: string;
+  stockQuantity?: number;
+  preparationTimeMinutes?: number;
+  sortOrder?: number;
 }
 
 export interface MenuItemRequest {
   name: string;
   description: string;
   price: number;
-  imageUrl?: string;
   category: string;
   available: boolean;
+  stockQuantity?: number;
+  preparationTimeMinutes?: number;
+  sortOrder?: number;
+}
+
+export interface Category {
+  id: string;
+  restaurantId: string;
+  name: string;
+  description?: string;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface CategoryRequest {
+  name: string;
+  description?: string;
+  sortOrder: number;
+  active: boolean;
+}
+
+export interface RestaurantAnalytics {
+  dailyRevenue: number;
+  weeklyOrders: number;
+  averageOrderValue: number;
+  popularProducts: { name: string; quantity: number; revenue: number }[];
 }
 
 export interface CartItem {
@@ -110,10 +261,9 @@ export interface Cart {
 }
 
 export interface OrderItem {
-  id?: string;
   menuItemId: string;
-  menuItemName: string;
-  name?: string;
+  name: string;
+  menuItemName?: string;
   unitPrice: number;
   quantity: number;
   subtotal: number;
@@ -127,6 +277,10 @@ export interface Order {
   customerName: string;
   customerPhone: string;
   deliveryAddress: string;
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
+  restaurantLatitude?: number;
+  restaurantLongitude?: number;
   items: OrderItem[];
   subtotalAmount: number;
   discountAmount: number;
@@ -139,8 +293,17 @@ export interface Order {
   stripeClientSecret?: string;
   driverId?: string;
   driverName?: string;
+  deliveryProofAt?: string;
+  deliveryProofSignature?: string;
+  deliveryProofPhotoUrl?: string;
+  deliveryProofCode?: string;
   createdAt: string;
   updatedAt: string;
+  deliveryFee?: number;
+  taxAmount?: number;
+  commissionAmount?: number;
+  estimatedDeliveryMinutes?: number;
+  scheduledAt?: string;
 }
 
 export interface OrderCreateRequest {
@@ -148,6 +311,8 @@ export interface OrderCreateRequest {
   customerName: string;
   customerPhone: string;
   deliveryAddress: string;
+  deliveryLatitude?: number;
+  deliveryLongitude?: number;
   items: {
     menuItemId: string;
     quantity: number;
@@ -155,7 +320,10 @@ export interface OrderCreateRequest {
   }[];
   paymentMethod: PaymentMethod;
   couponCode?: string;
+  scheduledAt?: string;
 }
+
+export interface PaymentHistoryEntry extends Order {}
 
 export interface OrderTrackingEvent {
   orderId: string;
@@ -169,21 +337,32 @@ export interface OrderTrackingEvent {
 export interface Coupon {
   id: string;
   code: string;
+  description?: string;
   discountType: DiscountType;
   discountValue: number;
-  restaurantId?: string;
   minOrderAmount?: number;
+  maxDiscountAmount?: number;
+  restaurantId?: string;
+  startDate?: string;
   expiryDate?: string;
+  maxUsageCount?: number;
+  usageCount?: number;
   active: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CouponRequest {
   code: string;
+  description?: string;
   discountType: DiscountType;
   discountValue: number;
-  restaurantId?: string;
   minOrderAmount?: number;
+  maxDiscountAmount?: number;
+  restaurantId?: string;
+  startDate?: string;
   expiryDate?: string;
+  maxUsageCount?: number;
   active: boolean;
 }
 
@@ -214,3 +393,13 @@ export interface Toast {
   duration?: number;
 }
 
+export interface PlatformStats {
+  totalOrders: number;
+  totalRevenue: number;
+  activeRestaurants: number;
+  totalRestaurants: number;
+  uniqueDrivers: number;
+  activeOrders: number;
+  deliveredOrders: number;
+  cancelledOrders: number;
+}

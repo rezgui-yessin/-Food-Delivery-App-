@@ -5,7 +5,9 @@ import { FormsModule } from '@angular/forms';
 import { RestaurantService } from '../../../core/services/restaurant.service';
 import { MenuService } from '../../../core/services/menu.service';
 import { CartService } from '../../../core/services/cart.service';
-import { Restaurant, MenuItem } from '../../../core/models';
+import { Restaurant, MenuItem, Review } from '../../../core/models';
+import { CustomerService } from '../../../core/services/customer.service';
+import { AuthService } from '../../../core/services/auth.service';
 import { getDishImage as getDishImageHelper, getRestaurantImage } from '../../../core/utils/asset-helpers';
 import { SkeletonMenuItemComponent } from '../../../shared/components/skeleton-card/skeleton-card.component';
 import { ModalComponent } from '../../../shared/components/modal/modal.component';
@@ -25,14 +27,14 @@ interface CategorySection {
     <div class="min-h-screen bg-slate-50 dark:bg-slate-900">
       <!-- Restaurant Banner with Real Photography -->
       @if (restaurant()) {
-        <div class="relative h-64 sm:h-80 overflow-hidden bg-slate-800">
+        <div class="relative h-[22rem] sm:h-80 overflow-hidden bg-slate-800">
           <img
             [src]="getRestaurantBanner(restaurant()!)"
             [alt]="restaurant()!.name"
             class="w-full h-full object-cover">
           <div class="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-black/30"></div>
 
-          <div class="absolute bottom-0 left-0 right-0 p-6 sm:p-8">
+          <div class="absolute bottom-0 left-0 right-0 p-4 sm:p-8">
             <div class="max-w-7xl mx-auto">
               <div class="flex flex-wrap items-end justify-between gap-4">
                 <div>
@@ -53,6 +55,9 @@ interface CategorySection {
                 </div>
 
                 <div class="flex items-center gap-3">
+                  <button type="button" (click)="toggleFavorite()" class="px-3.5 py-1.5 text-sm font-bold rounded-xl bg-white/15 text-white backdrop-blur-md hover:bg-white/25">
+                    {{ isFavorite() ? '♥ Saved' : '♡ Save' }}
+                  </button>
                   <span class="px-3.5 py-1.5 text-sm font-bold rounded-xl shadow"
                     [class]="restaurant()!.open ? 'bg-emerald-500 text-white' : 'bg-slate-600 text-slate-100'">
                     {{ restaurant()!.open ? '● Open Now' : '● Closed' }}
@@ -108,9 +113,9 @@ interface CategorySection {
                   <span class="text-xs text-slate-400 font-semibold">({{ section.items.length }} dishes)</span>
                 </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                <div class="grid grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-5">
                   @for (item of section.items; track item.id) {
-                    <div class="flex gap-4 p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 hover:shadow-lg hover:border-primary/40 transition-all group">
+                    <div class="flex gap-3 sm:gap-4 p-3 sm:p-4 rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 hover:shadow-lg hover:border-primary/40 transition-all group">
                       <!-- Dish Image with Real Photography -->
                       <div class="w-28 h-28 flex-shrink-0 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-700 relative">
                         <img
@@ -122,6 +127,30 @@ interface CategorySection {
                             <span class="text-[10px] font-bold text-white uppercase tracking-wider">Sold Out</span>
                           </div>
                         }
+
+                        <section class="mt-12 dash-card p-5 sm:p-6">
+                          <div class="flex items-center justify-between gap-3 mb-5">
+                            <div><h2 class="text-xl font-bold">Reviews</h2><p class="text-sm text-slate-500">Share your experience with this restaurant.</p></div>
+                            <span class="text-sm font-semibold text-primary">{{ reviews().length }} reviews</span>
+                          </div>
+                          <form (ngSubmit)="submitReview()" class="grid sm:grid-cols-[8rem_1fr_auto] gap-3 items-end mb-6">
+                            <label class="text-sm">Rating
+                              <select [(ngModel)]="reviewRating" name="reviewRating" class="w-full mt-1 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent">
+                                <option [ngValue]="5">5 stars</option><option [ngValue]="4">4 stars</option><option [ngValue]="3">3 stars</option><option [ngValue]="2">2 stars</option><option [ngValue]="1">1 star</option>
+                              </select>
+                            </label>
+                            <input [(ngModel)]="reviewComment" name="reviewComment" required placeholder="What did you think?" class="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-transparent">
+                            <button class="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold">Post review</button>
+                          </form>
+                          <div class="space-y-3">
+                            @for (review of reviews(); track review.id) {
+                              <article class="rounded-xl bg-slate-50 dark:bg-slate-800/60 p-4">
+                                <div class="flex justify-between gap-3"><p class="font-semibold">{{ review.customerName }}</p><span class="text-amber-500">{{ '★'.repeat(review.rating) }}</span></div>
+                                <p class="text-sm text-slate-600 dark:text-slate-300 mt-1">{{ review.comment }}</p>
+                              </article>
+                            } @empty { <p class="text-sm text-slate-500">No reviews yet.</p> }
+                          </div>
+                        </section>
                       </div>
 
                       <!-- Dish Info -->
@@ -215,6 +244,8 @@ export class RestaurantDetailComponent implements OnInit {
   private readonly restaurantService = inject(RestaurantService);
   private readonly menuService = inject(MenuService);
   private readonly cartService = inject(CartService);
+  private readonly customerService = inject(CustomerService);
+  private readonly authService = inject(AuthService);
 
   readonly restaurant = signal<Restaurant | null>(null);
   private readonly menuItems = signal<MenuItem[]>([]);
@@ -222,9 +253,13 @@ export class RestaurantDetailComponent implements OnInit {
   readonly isModalOpen = signal(false);
   readonly selectedItem = signal<MenuItem | null>(null);
   readonly activeCategory = signal('');
+  readonly reviews = signal<Review[]>([]);
+  readonly isFavorite = signal(false);
 
   modalQty = 1;
   specialInstructions = '';
+  reviewRating = 5;
+  reviewComment = '';
   readonly skeletons = Array(6).fill(null);
 
   readonly categories = computed(() =>
@@ -245,6 +280,10 @@ export class RestaurantDetailComponent implements OnInit {
       next: (r) => this.restaurant.set(r),
       error: () => {}
     });
+    this.customerService.getReviews(id).subscribe({ next: reviews => this.reviews.set(reviews) });
+    if (this.authService.isAuthenticated()) {
+      this.customerService.getFavorites().subscribe({ next: favorites => this.isFavorite.set(favorites.some(item => item.id === id)) });
+    }
 
     this.menuService.getByRestaurant(id).subscribe({
       next: (items) => {
@@ -253,9 +292,27 @@ export class RestaurantDetailComponent implements OnInit {
         if (items.length > 0) {
           this.activeCategory.set(items[0].category);
         }
+
       },
       error: () => {
         this.isLoading.set(false);
+      }
+    });
+  }
+
+  toggleFavorite(): void {
+    const id = this.restaurant()?.id;
+    if (!id) return;
+    this.customerService.toggleFavorite(id).subscribe({ next: result => this.isFavorite.set(result.favorite) });
+  }
+
+  submitReview(): void {
+    const id = this.restaurant()?.id;
+    if (!id || !this.reviewComment.trim()) return;
+    this.customerService.saveReview(id, { rating: this.reviewRating, comment: this.reviewComment.trim() }).subscribe({
+      next: review => {
+        this.reviews.update(items => [review, ...items.filter(item => item.id !== review.id)]);
+        this.reviewComment = '';
       }
     });
   }

@@ -34,6 +34,9 @@ public class MenuItemService {
                 .price(request.price())
                 .category(request.category())
                 .available(request.available())
+                .stockQuantity(request.stockQuantity())
+                .preparationTimeMinutes(request.preparationTimeMinutes())
+                .sortOrder(request.sortOrder())
                 .build();
 
         return MenuItemResponse.from(menuItemRepository.save(item));
@@ -61,7 +64,17 @@ public class MenuItemService {
         item.setPrice(request.price());
         item.setCategory(request.category());
         item.setAvailable(request.available());
+        item.setStockQuantity(request.stockQuantity());
+        item.setPreparationTimeMinutes(request.preparationTimeMinutes());
+        item.setSortOrder(request.sortOrder());
 
+        return MenuItemResponse.from(menuItemRepository.save(item));
+    }
+
+    public MenuItemResponse toggleAvailability(String restaurantId, String id, boolean available, AuthenticatedUser user) {
+        restaurantService.requireManageable(restaurantId, user);
+        MenuItem item = findItem(restaurantId, id);
+        item.setAvailable(available);
         return MenuItemResponse.from(menuItemRepository.save(item));
     }
 

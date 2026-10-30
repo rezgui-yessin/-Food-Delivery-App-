@@ -5,8 +5,11 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Pattern;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 
 import java.util.List;
+import java.time.Instant;
 
 public record OrderCreateRequest(
         @NotBlank(message = "Restaurant id is required") String restaurantId,
@@ -21,13 +24,22 @@ public record OrderCreateRequest(
 
         String couponCode,
 
-        PaymentMethod paymentMethod) {
+        PaymentMethod paymentMethod,
+
+        Instant scheduledAt,
+        @DecimalMin("-90") @DecimalMax("90") Double deliveryLatitude,
+        @DecimalMin("-180") @DecimalMax("180") Double deliveryLongitude) {
 
     public OrderCreateRequest(String restaurantId, String customerName, String customerPhone, String deliveryAddress, List<OrderItemRequest> items, String couponCode) {
-        this(restaurantId, customerName, customerPhone, deliveryAddress, items, couponCode, PaymentMethod.CARD);
+        this(restaurantId, customerName, customerPhone, deliveryAddress, items, couponCode, PaymentMethod.CARD, null, null, null);
+    }
+
+    public OrderCreateRequest(String restaurantId, String customerName, String customerPhone, String deliveryAddress,
+                              List<OrderItemRequest> items, String couponCode, PaymentMethod paymentMethod) {
+        this(restaurantId, customerName, customerPhone, deliveryAddress, items, couponCode, paymentMethod, null, null, null);
     }
 
     public OrderCreateRequest(String restaurantId, String customerName, String customerPhone, String deliveryAddress, List<OrderItemRequest> items) {
-        this(restaurantId, customerName, customerPhone, deliveryAddress, items, null, PaymentMethod.CARD);
+        this(restaurantId, customerName, customerPhone, deliveryAddress, items, null, PaymentMethod.CARD, null, null, null);
     }
 }

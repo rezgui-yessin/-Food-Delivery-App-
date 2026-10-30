@@ -3,6 +3,7 @@ package food_delivery_api.dto;
 import food_delivery_api.modell.PaymentMethod;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
+import java.time.Instant;
 
 public record CartCheckoutRequest(
         @NotBlank(message = "Customer name is required")
@@ -17,13 +18,14 @@ public record CartCheckoutRequest(
 
         String couponCode,
 
-        PaymentMethod paymentMethod
+        PaymentMethod paymentMethod,
+        Instant scheduledAt
 ) {
         public CartCheckoutRequest(String customerName, String customerPhone, String deliveryAddress, String couponCode) {
-                this(customerName, customerPhone, deliveryAddress, couponCode, PaymentMethod.CARD);
+                this(customerName, customerPhone, deliveryAddress, couponCode, PaymentMethod.CARD, null);
         }
 
         public CartCheckoutRequest(String customerName, String customerPhone, String deliveryAddress) {
-                this(customerName, customerPhone, deliveryAddress, null, PaymentMethod.CARD);
+                this(customerName, customerPhone, deliveryAddress, null, PaymentMethod.CARD, null);
         }
 }

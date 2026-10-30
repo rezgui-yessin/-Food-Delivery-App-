@@ -17,6 +17,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/payments")
@@ -30,6 +31,30 @@ public class PaymentController {
 
     @Value("${stripe.currency:usd}")
     private String currency;
+
+    @GetMapping("/history")
+    public List<OrderResponse> history(@AuthenticationPrincipal AuthenticatedUser user) {
+        return orderService.getAll(null, null, user).stream()
+                .filter(order -> order.paymentMethod() != null)
+                .toList();
+    }
+
+    @PostMapping("/orders/{orderId}/retry")
+    public PaymentIntentResponse retry(@PathVariable String orderId,
+                                       @AuthenticationPrincipal AuthenticatedUser user) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + orderId));
+        orderService.requireCanAccess(order, user);
+        if (order.getPaymentStatus() != PaymentStatus.FAILED) {
+            throw new BadRequestException("Only failed payments can be retried");
+        }
+        order.setPaymentMethod(PaymentMethod.CARD);
+        PaymentIntent intent = stripeService.createPaymentIntent(order);
+        order.setStripePaymentIntentId(intent.getId());
+        order.setStripeClientSecret(intent.getClientSecret());
+        orderRepository.save(order);
+        return new PaymentIntentResponse(intent.getClientSecret(), intent.getId(), order.getTotalAmount(), currency, order.getId(), order.getPaymentStatus());
+    }
 
     @PostMapping("/orders/{orderId}/create-intent")
     public PaymentIntentResponse createPaymentIntent(@PathVariable String orderId,

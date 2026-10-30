@@ -53,6 +53,13 @@ public class MenuItemController {
         return menuItemService.update(restaurantId, id, request, user);
     }
 
+    @PatchMapping("/{id}/availability")
+    public MenuItemResponse toggleAvailability(@PathVariable String restaurantId, @PathVariable String id,
+                                               @RequestParam boolean available,
+                                               @AuthenticationPrincipal AuthenticatedUser user) {
+        return menuItemService.toggleAvailability(restaurantId, id, available, user);
+    }
+
     @DeleteMapping("/{id}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void delete(@PathVariable String restaurantId,
